@@ -18,36 +18,28 @@
 #include "hyperparameters.h"
 
 void train(Classifier* model, DataSet& dataset, Hyperparameters& hp) {
-//     timeval startTime;
-//     gettimeofday(&startTime, NULL);
+  vector<int> randIndex;
+  int sampRatio = dataset.m_numSamples / 10;
+  vector<double> trainError(hp.numEpochs, 0.0);
+  for (int nEpoch = 0; nEpoch < hp.numEpochs; ++nEpoch) {
+    randPerm(dataset.m_numSamples, randIndex);
+    for (int nSamp = 0; nSamp < dataset.m_numSamples; ++nSamp) {
+      if (hp.findTrainError == true) {
+	Result result(dataset.m_numClasses);
+	model->eval(dataset.m_samples[randIndex[nSamp]], result);
+	if (result.prediction != dataset.m_samples[randIndex[nSamp]].y) {
+	  trainError[nEpoch]++;
+	}
+      }
 
-    vector<int> randIndex;
-    int sampRatio = dataset.m_numSamples / 10;
-    vector<double> trainError(hp.numEpochs, 0.0);
-    for (int nEpoch = 0; nEpoch < hp.numEpochs; nEpoch++) {
-        randPerm(dataset.m_numSamples, randIndex);
-        for (int nSamp = 0; nSamp < dataset.m_numSamples; nSamp++) {
-            if (hp.findTrainError == true) {
-                Result result(dataset.m_numClasses);
-                model->eval(dataset.m_samples[randIndex[nSamp]], result);
-                if (result.prediction != dataset.m_samples[randIndex[nSamp]].y) {
-                    trainError[nEpoch]++;
-                }
-            }
-
-            model->update(dataset.m_samples[randIndex[nSamp]]);
-            if (hp.verbose == true && (nSamp % sampRatio) == 0) {
-                cout << "--- " << model->name() << " training --- Epoch: " << nEpoch + 1 << " --- ";
-                cout << (10 * nSamp) / sampRatio << "%";
-                cout << " --- Training error = " << trainError[nEpoch] << "/" << nSamp << endl;
-            }
-        }
+      model->update(dataset.m_samples[randIndex[nSamp]]);
+      if (hp.verbose == true && (nSamp % sampRatio) == 0) {
+	cout << "--- " << model->name() << " training --- Epoch: " << nEpoch + 1 << " --- ";
+	cout << (10 * nSamp) / sampRatio << "%";
+	cout << " --- Training error = " << trainError[nEpoch] << "/" << nSamp << endl;
+      }
     }
-
-//     timeval endTime;
-//     gettimeofday(&endTime, NULL);
-//     cout << "--- " << model->name() << " training time = ";
-//     cout << (endTime.tv_sec - startTime.tv_sec + (endTime.tv_usec - startTime.tv_usec) / 1e6) << " seconds." << endl;
+  }
 }
 
 vector<Result> test(Classifier* model, DataSet& dataset, Hyperparameters& hp) {
