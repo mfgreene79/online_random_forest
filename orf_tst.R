@@ -4,6 +4,9 @@
 library(Rcpp)
 library(RcppEigen)
 
+sourceCpp("orf.cpp")
+source("orf_functions.R")
+
 ######### SIMULATE DATA - note: used in analyzing real data this would mean importing a dataset ###########
 ### simulate some predictors - 
 NCOL <- 5 #number of columns 
@@ -26,7 +29,6 @@ table(y) #distribtuion of the dependent variable
  # m = matrix(rnorm(100, 0, 1), ncol=10)
  # getEigenValues(m)
 
-sourceCpp("orf.cpp")
 
 orfmod <- online_random_forest(x=x, y=y,
                                numRandomTests=5, 
@@ -185,7 +187,6 @@ table(pred3.5[["prediction"]], y3)
 
 
 ### test orf_functions.R
-source("orf_functions.R")
 
 orfmod6 <- init_orf(numClasses=2, numFeatures=ncol(x), numRandomTests = 5, counterThreshold = 1000, maxDepth = 15,
                    numTrees = 10, numEpochs = 1)
@@ -267,4 +268,41 @@ for(i in 1:nrow(gr)) {
   counter = counter + 1
 }
 
+#what are the best parameters?
 res[which.max(res$perc_acc),]
+
+
+### test orf with a multinomial outcome ###
+NCOL <- 100 #number of columns 
+NROW <- 10000 #nbumber of rows
+
+betas <- rnorm(NCOL) #simulate coefficients for the regression
+x <- matrix(data=rnorm(NCOL * NROW), ncol=NCOL, nrow=NROW)
+
+### simulate the dependent variable related to the predictors
+z <- x %*% betas + rnorm(NROW, 0, .1)
+y <- floor(((z - max(z)) / (max(z) - min(z)) + 1) * 10)
+summary(y)
+table(y)
+
+sourceCpp("orf.cpp")
+source("orf_functions.R")
+
+orfmod7 <- init_orf(numClasses=length(unique(y)), numFeatures=ncol(x), numRandomTests = 50, counterThreshold = 100, maxDepth = 15,
+                    numTrees = 100, numEpochs = 1, minFeatRange=rep(0, ncol(x)), maxFeatRange = rep(1, ncol(x)))
+summary(orfmod7)
+dim(orfmod7$forest[[1]])
+#orfmod7$forest
+#orfmod7$featRange
+
+orfmod7 <- train_orf(model = orfmod7, x = as.matrix(x), y=as.matrix(y))        
+
+#compare actuals to predicted
+porf <- predict_orf(x=as.matrix(x), orfModel = orfmod7)
+summary(porf)
+head(porf$prediction)
+table(porf$prediction)
+table(y)
+table(y, porf$prediction)
+
+

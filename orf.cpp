@@ -74,6 +74,7 @@ DataSet make_trainData(MatrixXd x, VectorXd y) {
   } //loop nSamp
   ds.m_numClasses = labels.size();
 
+//  cout << "numClasses: " << ds.m_numClasses << std::endl;
   ds.findFeatRange();
 
   return(ds);
@@ -257,8 +258,8 @@ List orf(MatrixXd x, VectorXd y, List orfModel, bool trainModel=true) {
   Classifier* orf_ = NULL;
   orf_ = new OnlineRF(forestParms, hp, numClasses, oobe, counter, minFeatRange, maxFeatRange);
    
-   //update the ORF with feature ranges from the new dataset
-   orf_->updateFeatRange(trainData.m_minFeatRange, trainData.m_maxFeatRange);
+  //update the ORF with feature ranges from the new dataset
+  orf_->updateFeatRange(trainData.m_minFeatRange, trainData.m_maxFeatRange);
 
   pair<VectorXd,VectorXd> featRange = orf_->getFeatRange();
 
