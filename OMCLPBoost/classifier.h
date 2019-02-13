@@ -20,24 +20,35 @@
 using namespace std;
 
 class Classifier {
- public:
-    Classifier(const Hyperparameters& hp, const int& numClasses);
+public:
+  Classifier(const Hyperparameters& hp, const int& numClasses);
     
-    virtual ~Classifier();
+  virtual ~Classifier();
+  
+  virtual void update(Sample& sample) = 0;
+  virtual vector<MatrixXd> exportParms() = 0; 
+  virtual void eval(Sample& sample, Result& result) = 0;
 
-    virtual void update(Sample& sample) = 0;
-    virtual void eval(Sample& sample, Result& result) = 0;
-    virtual vector<MatrixXd> getParms() = 0;
-    virtual MatrixXd getParmsMatrix() = 0;
+  virtual double getOOBE() = 0;
+  virtual double getCounter() = 0;
 
-    const string name() const {
-        return m_name;
-    }
+  virtual void printInfo() = 0;
+  virtual void print() = 0;
 
- protected:
-    const int* m_numClasses;
-    const Hyperparameters* m_hp;
-    string m_name;
+  //functions to access and edit the min and max feature ranges
+  virtual pair<VectorXd,VectorXd> getFeatRange() = 0;
+  virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) = 0;  
+
+  const string name() const {
+    return m_name;
+  }
+
+protected:
+  const int* m_numClasses;
+  const Hyperparameters* m_hp;
+  string m_name;
+
+
 };
 
 #endif /* CLASSIFIER_H_ */

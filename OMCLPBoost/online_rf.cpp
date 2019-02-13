@@ -217,7 +217,7 @@ void OnlineNode::update(const Sample& sample) {
   m_counter += sample.w;
   m_labelStats(sample.y) += sample.w;
 
-  if (m_isLeaf == true) {
+   if (m_isLeaf == true) {
     // Update online tests
     for (vector<RandomTest*>::iterator itr = m_onlineTests.begin(); 
 	 itr != m_onlineTests.end(); ++itr) {
@@ -267,13 +267,13 @@ void OnlineNode::update(const Sample& sample) {
       //set the child node numbers now that nodes have been created
       setChildNodeNumbers(newNodeNumber, newNodeNumber + 1);
     }
-  } else {
+   } else {
     if (m_bestTest->eval(sample)) {
       m_rightChildNode->update(sample);
     } else {
       m_leftChildNode->update(sample);
     }
-  }
+   }
 }
 
 void OnlineNode::eval(const Sample& sample, Result& result) {

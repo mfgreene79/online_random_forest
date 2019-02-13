@@ -20,18 +20,26 @@
 #include "utilities.h"
 
 class RandomTest {
- public:
-    RandomTest(const int& numClasses, const int& numFeatures, const VectorXd &minFeatRange, const VectorXd &maxFeatRange);
+public:
+  //Version to initialize with randomization
+  RandomTest(const int& numClasses, const int& numFeatures, const VectorXd &minFeatRange, const VectorXd &maxFeatRange);
 
-    void update(const Sample& sample);
-    
-    bool eval(const Sample& sample) const;
-    
-    double score() const;
+  //Version to initialize from a known feature/threshold
+  RandomTest(const int& numClasses, int feature, double threshold,
+	     VectorXd trueStats, VectorXd falseStats);
+  
+  void update(const Sample& sample);
+  
+  bool eval(const Sample& sample) const;
+  
+  double score() const;
+  
+  pair<int,double> getParms();
+  
+  pair<VectorXd, VectorXd > getStats() const;
 
-    pair<int,double> getParms();
-    
-    pair<VectorXd, VectorXd > getStats() const;
+  void print();
+  
     
  protected:
     const int* m_numClasses;
@@ -47,94 +55,168 @@ class RandomTest {
 };
 
 class OnlineNode {
- public:
+public:
   // version to initialize the root node
-    OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
-	       const int& depth, int nodeNumber, MatrixXd& parms);
+  OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
+	     const int& depth, int& numNodes);
   //version to initialize versions below the root node
-    OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
-	       const int& depth, const VectorXd& parentStats, int nodeNumber, int parentNodeNumber, MatrixXd& parms);
+  OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
+	     const int& depth, const VectorXd& parentStats, 
+	     int nodeNumber, int parentNodeNumber, int& numNodes);
+  
+  //Version to initialize from a vector of information about the node
+  OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+	     const int& numClasses, int& numNodes,
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+
+  ~OnlineNode();
     
-    ~OnlineNode();
-    
+  //update with data
+  //  void update(const Sample& sample);
   void update(const Sample& sample);
-    void eval(const Sample& sample, Result& result);
+  //evaluate based on a new data point
+  void eval(const Sample& sample, Result& result);
+
+  //version to grow the node recursively from a matrix of information
+
+  void update(const MatrixXd& treeParms);
+
+  //set child node numbers if the split occurs
+  void setChildNodeNumbers(int rightChildNodeNumber, int leftChildNodeNumber);
 
   //method to add nodeParms to the matrix of parms for the tree
-  VectorXd getParms();
-    void updateParms(VectorXd nodeParms);
+  VectorXd exportParms(); //export parms out to a vector
+  
+  //recursive function to add elements to the vector for each child node
+  void exportChildParms(vector<VectorXd> &treeParmsVector);
+
+  void printInfo();
+  void print();
+
 
  private:
   int m_nodeNumber;
   int m_parentNodeNumber;
-    const int* m_numClasses;
-    int m_depth;
-    bool m_isLeaf;
-    const Hyperparameters* m_hp;
-    int m_label;
-    double m_counter;
-    double m_parentCounter;
-    VectorXd m_labelStats;
-    const VectorXd* m_minFeatRange;
-    const VectorXd* m_maxFeatRange;
-    
-    OnlineNode* m_leftChildNode;
-    OnlineNode* m_rightChildNode;
-    
-    vector<RandomTest*> m_onlineTests;
-    RandomTest* m_bestTest;
+  int m_rightChildNodeNumber;
+  int m_leftChildNodeNumber;
+  const int* m_numClasses;
+  int m_depth;
+  bool m_isLeaf;
+  const Hyperparameters* m_hp;
+  int m_label;
+  double m_counter;
+  double m_parentCounter;
+  VectorXd m_labelStats;
+  const VectorXd* m_minFeatRange;
+  const VectorXd* m_maxFeatRange;
+  
+  OnlineNode* m_leftChildNode;
+  OnlineNode* m_rightChildNode;
+  
+  vector<RandomTest*> m_onlineTests;
+  RandomTest* m_bestTest;
 
-  //pointer to parameters for the tree
-  MatrixXd* m_parms;
+  int* m_numNodes; //pointer to tree for number of nodes
     
-    bool shouldISplit() const;
+  bool shouldISplit() const;
 };
 
 
 class OnlineTree: public Classifier {
- public:
-    OnlineTree(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+public:
+  //version to create with randomization
+  OnlineTree(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	       const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
 
-    ~OnlineTree();
-    
-    virtual void update(Sample& sample);
+  //version to create from a matrix of parameters
+  OnlineTree(const MatrixXd& treeParms, const Hyperparameters& hp,
+	     const int& numClasses, double oobe, double counter,
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
 
-    virtual void eval(Sample& sample, Result& result);
+  ~OnlineTree();
 
-    virtual vector<MatrixXd> getParms();    
-    virtual MatrixXd getParmsMatrix();
+  //update the tree with a new data point
+  virtual void update(Sample& sample);
 
- private:
-    int m_numNodes;
-    const int* m_numClasses; 
-    const Hyperparameters* m_hp;
-    MatrixXd m_parms;
-    OnlineNode* m_rootNode;
+  //evaluate a new data point
+  virtual void eval(Sample& sample, Result& result);
+
+  //export tree parameters
+  virtual vector<MatrixXd> exportParms();  //using a vector as needs to be constant across the classifier class  
+
+  //get info about the tree
+  virtual double getOOBE();
+  virtual double getCounter();
+
+  //print information about and of the tree
+  virtual void printInfo();
+  virtual void print();
+
+  virtual pair<VectorXd,VectorXd> getFeatRange();
+  virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange);
+
+private:
+  int m_numNodes;
+  double m_oobe;
+  double m_counter;
+
+  const int* m_numClasses; 
+  const Hyperparameters* m_hp;
+  OnlineNode* m_rootNode;
+
+  const VectorXd* m_minFeatRange;
+  const VectorXd* m_maxFeatRange;
+
 };
 
 
 class OnlineRF: public Classifier {
- public:
-    OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+public:
+  //version to construct using randomization
+  OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	   VectorXd minFeatRange, VectorXd maxFeatRange);
 
-    ~OnlineRF();
-    
-    virtual void update(Sample& sample);
+  //version to construct from a set of parameters
+  OnlineRF(const vector<MatrixXd> orfParms, const Hyperparameters& hp,
+	   const int& numClasses, double oobe, double counter,
+	   VectorXd minFeatRange, VectorXd maxFeatRange);
 
-    virtual void eval(Sample& sample, Result& result);
+  ~OnlineRF();
+  
+  //udpate with a new data point
+  virtual void update(Sample& sample);
+  
+  //evaluate a new data point
+  virtual void eval(Sample& sample, Result& result);
  
-    virtual vector<MatrixXd> getParms();
-    virtual MatrixXd getParmsMatrix();
+  //export forest parameters
+  virtual vector<MatrixXd> exportParms(); 
 
- protected:
-    double m_counter;
-    double m_oobe;
+  //get info about the tree
+  virtual double getOOBE();
+  virtual double getCounter();
+
+  //print information about and of the RF
+  virtual void printInfo();
+  virtual void print();
+
+  virtual pair<VectorXd,VectorXd> getFeatRange();
+  virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange);
+
+protected:
+  double m_counter;
+  double m_oobe;
     
-    vector<OnlineTree*> m_trees;
-    vector<MatrixXd> rf_parms;
+  vector<OnlineTree*> m_trees;
 
   const int* m_numClasses;
   const Hyperparameters* m_hp;
+
+  //store vectors of min and max feature ranges - to be checked and updated when more data loaded
+  VectorXd m_minFeatRange;
+  VectorXd m_maxFeatRange;
 };
 
 #endif /* ONLINERF_H_ */

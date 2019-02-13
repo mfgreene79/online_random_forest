@@ -37,17 +37,19 @@ public:
 
 class DataSet {
  public:
-    void findFeatRange();
+  void findFeatRange();
 
-    void load(const string& x_filename, const string& y_filename);
+  void load(const string& x_filename, const string& y_filename);
 
-    vector<Sample> m_samples;
-    int m_numSamples;
-    int m_numFeatures;
-    int m_numClasses;
+  vector<Sample> m_samples;
+  int m_numSamples;
+  int m_numFeatures;
+  int m_numClasses;
 
-    VectorXd m_minFeatRange;
-    VectorXd m_maxFeatRange;
+  //VectorXd m_labels;
+
+  VectorXd m_minFeatRange;
+  VectorXd m_maxFeatRange;
 };
 
 class Result {
