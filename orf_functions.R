@@ -7,6 +7,7 @@ library(RcppEigen)
 sourceCpp("orf.cpp")
 
 init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, 
+                     minFeatRange = NULL, maxFeatRange = NULL, labels=c(1:numClasses),
                      findTrainError=FALSE, verbose=FALSE) {
   
   #prepare model object to return
@@ -16,8 +17,10 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
   out$numClasses = numClasses
   
   #feature range
-  minFeatRange = rep(0, numFeatures)
-  maxFeatRange = rep(0, numFeatures)
+  if(is.null(minFeatRange) || is.null(maxFeatRange)) {
+    minFeatRange = rep(0, numFeatures)
+    maxFeatRange = rep(0, numFeatures)
+  }
   featRange = list("minFeatRange" = minFeatRange, "maxFeatRange" = maxFeatRange)
   out$featRange = featRange
   
@@ -46,7 +49,9 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
   for(j in c(0:(numRandomTests - 1))) {
     colnames_forest = c(colnames_forest, paste0("randomTest", j, "_feature"))
     colnames_forest = c(colnames_forest, paste0("randomTest", j, "_threshold"))
-    fdat = c(fdat, -1, 0)
+    randFeat = floor(runif(1, min = 1, max = numFeatures + 1))
+    randThresh = runif(1, min=minFeatRange[randFeat], max=maxFeatRange[randFeat])
+    fdat = c(fdat, randFeat, randThresh)
     for(i in c(0:(numClasses-1))) {
       colnames_forest = c(colnames_forest, paste0("randomTest", j, "_trueStats", i))
     }
@@ -78,11 +83,14 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
 
   out$hyperparameters = hp  
   
+  out$labels = labels
+  
   return(out)
 }
 
 train_orf <- function(model, x, y, trainModel=TRUE) {
   newmodel = orf(x, y, model, trainModel=trainModel)
+  newmodel$labels = model$labels
   return(newmodel)
 }
 
