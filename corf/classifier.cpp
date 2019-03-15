@@ -11,23 +11,11 @@
  *                    Graz University of Technology, Austria
  */
 
-#ifndef BOOSTER_H
-#define BOOSTER_H
-
 #include "classifier.h"
 
-class Booster : public Classifier {
- public:
-    Booster(const Hyperparameters& hp, const int& numClasses, const int& numFeatures,
-            const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
-    ~Booster();
-    
-    virtual void eval(Sample& sample, Result& result);
+Classifier::Classifier(const Hyperparameters& hp, const int& numClasses) : 
+    m_numClasses(&numClasses), m_hp(&hp) {
+}
 
- protected:
-    vector<Classifier*> m_bases;
-    VectorXd m_w;
-    vector<Cache> m_cache;
-};
-
-#endif // BOOSTER_H
+Classifier::~Classifier() {
+}

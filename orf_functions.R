@@ -7,6 +7,7 @@ library(RcppEigen)
 sourceCpp("orf.cpp")
 
 init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, 
+                     type = 'classification', method = 'gini', causal=FALSE,
                      minFeatRange = NULL, maxFeatRange = NULL, labels=c(1:numClasses),
                      findTrainError=FALSE, verbose=FALSE) {
   
@@ -25,47 +26,117 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
   out$featRange = featRange
   
   #forest matrix
-  forest = matrix(data=NA, nrow = 1, ncol=13 + 3 * numClasses + 2 * numRandomTests * (1 + numClasses))
-  colnames_forest = c("nodeNumber", "parentNodeNumber", "rightChildNodeNumber", "leftChildNodeNumber",
-                       "depth", "isLeaf","label","counter","parentCounter","numClasses","numRandomTests")
-  fdat = c(0, -1, -1, -1, 0, 1, 0, 0, 0, numClasses, numRandomTests)
-  
-  colnames_forest = c(colnames_forest, paste0("labelStats_",c(0:(numClasses-1))))
-  fdat = c(fdat, rep(0, numClasses))
+  if(causal == FALSE) {
+    forest = matrix(data=NA, nrow = 1, ncol=13 + 3 * numClasses + 2 * numRandomTests * (1 + numClasses))
+    colnames_forest = c("nodeNumber", "parentNodeNumber", "rightChildNodeNumber", "leftChildNodeNumber",
+                         "depth", "isLeaf","label","counter","parentCounter","numClasses","numRandomTests")
+    fdat = c(0, -1, -1, -1, 0, 1, 0, 0, 0, numClasses, numRandomTests)
     
-  colnames_forest = c(colnames_forest, "bestTest_feature", "bestTest_threshold")
-  fdat = c(fdat, -1, 0)
-  
-  for(i in c(0:(numClasses-1))) {
-    colnames_forest = c(colnames_forest, paste0("bestTest_trueStats",i))
-  }
-  fdat = c(fdat, rep(0, numClasses))
-  
-  for(i in c(0:(numClasses-1))) {
-    colnames_forest = c(colnames_forest, paste0("bestTest_falseStats",i))
-  }
-  fdat = c(fdat, rep(0, numClasses))
-  
-  for(j in c(0:(numRandomTests - 1))) {
-    colnames_forest = c(colnames_forest, paste0("randomTest", j, "_feature"))
-    colnames_forest = c(colnames_forest, paste0("randomTest", j, "_threshold"))
-    randFeat = floor(runif(1, min = 1, max = numFeatures + 1))
-    randThresh = runif(1, min=minFeatRange[randFeat], max=maxFeatRange[randFeat])
-    fdat = c(fdat, randFeat, randThresh)
+    colnames_forest = c(colnames_forest, paste0("labelStats_",c(0:(numClasses-1))))
+    fdat = c(fdat, rep(0, numClasses))
+      
+    colnames_forest = c(colnames_forest, "bestTest_feature", "bestTest_threshold")
+    fdat = c(fdat, -1, 0)
+    
     for(i in c(0:(numClasses-1))) {
-      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_trueStats", i))
+      colnames_forest = c(colnames_forest, paste0("bestTest_trueStats",i))
     }
+    fdat = c(fdat, rep(0, numClasses))
+    
     for(i in c(0:(numClasses-1))) {
-      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_falseStats", i))
+      colnames_forest = c(colnames_forest, paste0("bestTest_falseStats",i))
     }
-    fdat = c(fdat, rep(0, numClasses*2))
-  }
+    fdat = c(fdat, rep(0, numClasses))
+    
+    for(j in c(0:(numRandomTests - 1))) {
+      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_feature"))
+      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_threshold"))
+      randFeat = floor(runif(1, min = 1, max = numFeatures + 1))
+      randThresh = runif(1, min=minFeatRange[randFeat], max=maxFeatRange[randFeat])
+      fdat = c(fdat, randFeat, randThresh)
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_trueStats", i))
+      }
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_falseStats", i))
+      }
+      fdat = c(fdat, rep(0, numClasses*2))
+    }
+  
+  } else { #causal == TRUE                 
+    forest = matrix(data=NA, nrow = 1, ncol=15 + 8 * numClasses + 2 * numRandomTests * (1 + 2 * numClasses))
+    colnames_forest = c("nodeNumber", "parentNodeNumber", "rightChildNodeNumber", "leftChildNodeNumber",
+                        "depth", "isLeaf","label","counter")
+    fdat = c(0, -1, -1, -1, 0, 1, 0, 0)
+    
+    colnames_forest = c(colnames_forest, paste0("ite_",c(0:(numClasses-1))))
+    fdat = c(fdat, 0, 0)
+    
+    colnames_forest = c(colnames_forest, "treatCounter", "controlCounter")
+    fdat = c(fdat, 0, 0)
+    
+    colnames_forest = c(colnames_forest,"parentCounter","numClasses","numRandomTests")
+    fdat = c(fdat, 0, numClasses, numRandomTests)
 
+    colnames_forest = c(colnames_forest, paste0("labelStats_",c(0:(numClasses-1))))
+    fdat = c(fdat, rep(0, numClasses))
+
+    colnames_forest = c(colnames_forest, paste0("treatLabelStats_",c(0:(numClasses-1))))
+    fdat = c(fdat, rep(0, numClasses))
+
+    colnames_forest = c(colnames_forest, paste0("controlLabelStats_",c(0:(numClasses-1))))
+    fdat = c(fdat, rep(0, numClasses))
+    
+    colnames_forest = c(colnames_forest, "bestTest_feature", "bestTest_threshold")
+    fdat = c(fdat, -1, 0)
+    
+    for(i in c(0:(numClasses-1))) {
+      colnames_forest = c(colnames_forest, paste0("bestTest_treatTrueStats",i))
+    }
+    fdat = c(fdat, rep(0, numClasses))
+    
+    for(i in c(0:(numClasses-1))) {
+      colnames_forest = c(colnames_forest, paste0("bestTest_treatFalseStats",i))
+    }
+    fdat = c(fdat, rep(0, numClasses))
+
+    for(i in c(0:(numClasses-1))) {
+      colnames_forest = c(colnames_forest, paste0("bestTest_controlTrueStats",i))
+    }
+    fdat = c(fdat, rep(0, numClasses))
+    
+    for(i in c(0:(numClasses-1))) {
+      colnames_forest = c(colnames_forest, paste0("bestTest_controlFalseStats",i))
+    }
+    fdat = c(fdat, rep(0, numClasses))
+    
+    for(j in c(0:(numRandomTests - 1))) {
+      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_feature"))
+      colnames_forest = c(colnames_forest, paste0("randomTest", j, "_threshold"))
+      randFeat = floor(runif(1, min = 1, max = numFeatures + 1))
+      randThresh = runif(1, min=minFeatRange[randFeat], max=maxFeatRange[randFeat])
+      fdat = c(fdat, randFeat, randThresh)
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_treatTrueStats", i))
+      }
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_treatFalseStats", i))
+      }
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_controlTrueStats", i))
+      }
+      for(i in c(0:(numClasses-1))) {
+        colnames_forest = c(colnames_forest, paste0("randomTest", j, "_controlFalseStats", i))
+      }
+      fdat = c(fdat, rep(0, numClasses*4))
+    }
+    
+  } #causal == TRUE  
   forest[1,] = fdat
   colnames(forest) = colnames_forest
-
+  
   forest_list = list()
-  for(i in 1:numTrees) {
+  for(i in 0:(numTrees-1)) {
     forest_list[[paste0("tree",i)]] = forest
   }
     
@@ -80,6 +151,9 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
   hp$numEpochs = numEpochs
   hp$findTrainError = findTrainError
   hp$verbose = verbose
+  hp$type = type
+  hp$method = method
+  hp$causal = causal
 
   out$hyperparameters = hp  
   
@@ -90,6 +164,12 @@ init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, 
 
 train_orf <- function(model, x, y, trainModel=TRUE) {
   newmodel = orf(x, y, model, trainModel=trainModel)
+  newmodel$labels = model$labels
+  return(newmodel)
+}
+
+train_corf <- function(model, x, y, w, trainModel=TRUE) {
+  newmodel = corf(x, y, w, model, trainModel=trainModel)
   newmodel$labels = model$labels
   return(newmodel)
 }

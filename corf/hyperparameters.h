@@ -29,11 +29,16 @@ class Hyperparameters {
  public:
   //    Hyperparameters();
 
-    // Forest
-    int numRandomTests;
-    int counterThreshold;
-    int maxDepth;
-    int numTrees;
+  // Forest
+  int numRandomTests;
+  int counterThreshold;
+  int maxDepth;
+  int numTrees;
+  
+  string method; //splitting criteria.  gini, mse
+  string type; //rf type: classification, regression
+
+  bool causal; //causal rf indicator vs not causal
 
 //     // Linear LaRank
 //     double larankC;

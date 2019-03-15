@@ -29,46 +29,36 @@ using namespace Eigen;
 // DATA CLASSES
 class Sample {
 public:
-    VectorXd x;
-    int y;
-    double w;
-    int id;
+  VectorXd x; //features
+  int y; //target
+  double w; //weight
+  int id; //id
+  bool treat; //treatment identifier
 };
 
 class DataSet {
  public:
   void findFeatRange();
 
-  void load(const string& x_filename, const string& y_filename);
-
   vector<Sample> m_samples;
   int m_numSamples;
   int m_numFeatures;
   int m_numClasses;
-
-  //VectorXd m_labels;
 
   VectorXd m_minFeatRange;
   VectorXd m_maxFeatRange;
 };
 
 class Result {
- public:
-    Result();
-    Result(const int& numClasses);
-
-    VectorXd confidence;
-    int prediction;
-};
-
-class Cache {
 public:
-    Cache();
-    Cache(const Sample& sample, const int& numBases, const int& numClasses);
+  Result();
+  Result(const int& numClasses);
 
-    Sample cacheSample;
-    double margin;
-    int yPrime; // Class with closest margin to the sample
+  VectorXd confidence;
+  int prediction;
+  VectorXd ite; //individual treatment effect - difference over control - one value per class
+  
+  MatrixXd iteAllTrees; //capture values for all trees - one col per class one row per tree
 };
 
 #endif /* DATA_H_ */

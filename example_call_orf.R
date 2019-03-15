@@ -4,7 +4,11 @@
 
 ### load any libraries that we need here ###
 #library(ourlibrary)
+library(Rcpp)
+library(RcppEigen)
 
+sourceCpp("./orf.cpp")
+source("orf_functions.R")
 
 ######### SIMULATE DATA - note: used in analyzing real data this would mean importing a dataset ###########
 ### simulate some predictors - 
@@ -29,8 +33,6 @@ table(y) #distribtuion of the dependent variable
 ########### Initialize the model object
 
 orf_model = initialize_orf(ntrees=1000, n_features = 3) 
-#question: what other parameters are needed to initialize the random forest?
-
 
 ########### pass all data into the model object to fit it
 orf_model = fit_orf(model=orf_model, x=X, y=y)

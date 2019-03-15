@@ -22,11 +22,20 @@
 class RandomTest {
 public:
   //Version to initialize with randomization
-  RandomTest(const int& numClasses, const int& numFeatures, const VectorXd &minFeatRange, const VectorXd &maxFeatRange);
+  RandomTest(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	     const VectorXd &minFeatRange, const VectorXd &maxFeatRange);
 
-  //Version to initialize from a known feature/threshold
-  RandomTest(const int& numClasses, int feature, double threshold,
+  //Version to initialize from a known feature/threshold - not causal
+  RandomTest(const Hyperparameters& hp, const int& numClasses, 
+	     int feature, double threshold,
 	     VectorXd trueStats, VectorXd falseStats);
+
+  //Version to initialize from a known feature/threshold - causal 
+  RandomTest(const Hyperparameters& hp, const int& numClasses, 
+	     int feature, double threshold,
+	     VectorXd treatTrueStats, VectorXd treatFalseStats,
+	     VectorXd controlTrueStats, VectorXd controlFalseStats
+	     );
   
   void update(const Sample& sample);
   
@@ -36,22 +45,37 @@ public:
   
   pair<int,double> getParms();
   
-  pair<VectorXd, VectorXd > getStats() const;
+  pair<VectorXd, VectorXd > getStats(string type = "all") const;
 
   void print();
   
     
  protected:
-    const int* m_numClasses;
-    int m_feature;
-    double m_threshold;
-    
-    double m_trueCount;
-    double m_falseCount;
-    VectorXd m_trueStats;
-    VectorXd m_falseStats;
+  const Hyperparameters* m_hp;
+  const int* m_numClasses;
+  int m_feature;
+  double m_threshold;
 
-    void updateStats(const Sample& sample, const bool& decision);
+  //total counts and stats
+  int m_trueCount;
+  int m_falseCount;
+  VectorXd m_trueStats;
+  VectorXd m_falseStats;
+    
+  //treatment counts and stats
+  int m_treatTrueCount;
+  int m_treatFalseCount;
+  VectorXd m_treatTrueStats;
+  VectorXd m_treatFalseStats;
+
+  //control counts and stats
+  int m_controlTrueCount;
+  int m_controlFalseCount;
+  VectorXd m_controlTrueStats;
+  VectorXd m_controlFalseStats;
+
+  
+  void updateStats(const Sample& sample, const bool& decision);
 };
 
 class OnlineNode {
@@ -60,10 +84,17 @@ public:
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
 	     const int& depth, int& numNodes);
-  //version to initialize versions below the root node
+  //version to initialize versions below the root node - not causal
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
 	     const int& depth, const VectorXd& parentStats, 
+	     int nodeNumber, int parentNodeNumber, int& numNodes);
+
+  //version to initialize versions below the root node - causal
+  OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
+	     const int& depth, const VectorXd& treatParentStats, 
+	     const VectorXd& controlParentStats, 
 	     int nodeNumber, int parentNodeNumber, int& numNodes);
   
   //Version to initialize from a vector of information about the node
@@ -106,9 +137,14 @@ public:
   bool m_isLeaf;
   const Hyperparameters* m_hp;
   int m_label;
+  VectorXd m_ite; //individual treatment effect - populated if causal tree, otherwise 0s
   double m_counter;
+  double m_treatCounter;
+  double m_controlCounter;
   double m_parentCounter;
   VectorXd m_labelStats;
+  VectorXd m_treatLabelStats;
+  VectorXd m_controlLabelStats;
   const VectorXd* m_minFeatRange;
   const VectorXd* m_maxFeatRange;
   

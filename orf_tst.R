@@ -3,13 +3,14 @@
 ### this program is test of the online_random_forest functionality from Rcpp
 library(Rcpp)
 library(RcppEigen)
-
+library(dplyr)
+rm(list=ls())
 sourceCpp("orf.cpp")
 source("orf_functions.R")
 
 ######### SIMULATE DATA - note: used in analyzing real data this would mean importing a dataset ###########
 ### simulate some predictors - 
-NCOL <- 5 #number of columns 
+NCOL <- 100 #number of columns 
 NROW <- 10000 #nbumber of rows
 
 betas <- rnorm(NCOL) #simulate coefficients for the regression
@@ -24,34 +25,27 @@ table(y) #distribtuion of the dependent variable
 
 ########## Done simulating data ############
 
-### test of RcppEigen functionality
- # sourceCpp("rcpp_eigen_test.cpp")
- # m = matrix(rnorm(100, 0, 1), ncol=10)
- # getEigenValues(m)
-
-
 orfmod <- online_random_forest(x=x, y=y,
                                numRandomTests=5, 
-                               counterThreshold=1000, 
+                               counterThreshold=100, 
                                maxDepth=15,
                                numTrees=10,
                                numEpochs = 1,
                                findTrainError=TRUE,
-                               verbose=TRUE
+                               verbose=TRUE,
+                               trainModel = TRUE
                                )
 length(orfmod)
 names(orfmod)
+names(orfmod$hyperparameters)
+
 length(orfmod$forest)
 names(orfmod$forest)
 dim(orfmod$forest[[1]])
+colnames(orfmod$forest[[1]])
 orfmod$forest[[1]]
 
 orfmod$featRange
-
-# colnames(orfmod[[1]]) <- c('nodeNumber','parentNodeNumber','depth','isLeaf','label',
-#                            'counter','parentCounter','labelStats_size','onlineTests_size',
-#                            'labelStats_0','labelStats_1',
-#                            'onlineTests1_feature','onlineTests1_threshold')
 
 ### test building a forest from the matrix
 
@@ -65,8 +59,6 @@ orfmod2$oobe
 
 orfmod$n
 orfmod2$n
-
-
 
 #with train() function commented out - this code checks that the RF is properly built and then exported
 orfmod2$oobe == orfmod$oobe
@@ -85,6 +77,9 @@ dim(orfmod2$forest[[1]])
 length(orfmod$forest[[1]])
 sum(orfmod$forest[[1]] == orfmod2$forest[[1]])
 orfmod$forest[[1]] == orfmod2$forest[[1]]
+
+rbind(orfmod$forest[[1]][1,],
+      orfmod2$forest[[1]][1,])
 
 ### try with training applied 
 #sourceCpp("orf.cpp")
@@ -207,6 +202,9 @@ dim(orfmod$forest[[1]]); dim(orfmod6$forest[[1]])
 orfmod6_updated <- train_orf(model=orfmod6, x=x, y=y)
 length(orfmod$forest); length(orfmod6_updated$forest)
 dim(orfmod$forest[[1]]); dim(orfmod6_updated$forest[[1]])
+rbind(orfmod$forest[[1]][1,],
+      orfmod6_updated$forest[[1]][1,])
+
 orfmod$featRange; orfmod6_updated$featRange
 orfmod6$featRange
 
@@ -220,6 +218,8 @@ orfmod6_updated2 <- init_orf(numClasses=2, numFeatures=ncol(x), numRandomTests =
                              numTrees = 10, numEpochs = 1)
 i <- 1
 for(i in 1:nrow(x)) {
+  if(i %% 100 == 0)
+    print(i)
   orfmod6_updated2 = train_orf(orfmod6_updated2, matrix(x[i,], nrow=1, byrow = TRUE), matrix(y[i], nrow=1))  
 }
 
@@ -305,4 +305,148 @@ table(porf$prediction)
 table(y)
 table(y, porf$prediction)
 
+
+
+##########################################################################################################################
+#
+#  TESTING CAUSAL RANDOM FOREST COMPONENTS
+#
+##########################################################################################################################
+
+NCOL <- 100 #number of columns 
+NROW <- 10000 #nbumber of rows
+
+#simulate coefficients for the regression
+betas <- rnorm(NCOL) 
+
+x <- matrix(data=rnorm(NCOL * NROW), ncol=NCOL, nrow=NROW)
+
+#separately simulate individual treatment effects
+ites <- x[,1:10] %*% (betas[1:10])/10 + 1 + rnorm(NROW, 0, .5)
+hist(ites)
+
+#simulate w as the treatment assignment
+w <- ifelse(runif(NROW) > .5, 1, 0)
+
+
+### simulate the dependent variable related to the predictors
+ep <- rnorm(NROW, 0, .1)
+z0 <- x %*% betas + ep
+z1 <- z0 + ites
+z <- x %*% betas + ites*w + ep
+y <- ifelse(z > 0, 1, 0)
+
+hist(z) #histogram of z
+table(y) #distribtuion of the dependent variable
+
+#check average treatment effect
+tapply(y, w, mean)
+
+cbind(y, w, x) -> itedat
+colnames(itedat) <- c("y","w",paste0("x",1:NCOL))
+itedat %>%
+  as_data_frame(.) %>%
+  group_by(w) %>%
+  summarise(y=mean(y))
+
+### check ites by x covariates (interactions with x)
+itedat %>%
+  as_data_frame(.) %>%
+  mutate(x1gt0 = ifelse(x1 > 0, 1, 0)) %>%
+  group_by(x1gt0, w) %>%
+  summarise(y=mean(y))
+
+#see if we can recover the individual treatment effects
+#sourceCpp("orf.cpp")
+
+crf <- causal_online_random_forest(x=x, y=y, treat=w, numRandomTests = 10, counterThreshold = 100, trainModel = TRUE,
+                                   maxDepth = 15, numTrees = 10, numEpochs = 1, type = "classification", method = "gini", 
+                                   causal = TRUE, findTrainError = TRUE, verbose = TRUE)
+
+
+
+names(crf)
+crf$
+crf$n
+crf$oobe
+dim(crf$forest[[1]])
+colnames(crf$forest[[1]])
+crf$forest[[1]]
+
+
+
+#summary(crf$forest[[1]][,"ite_0"])
+#crf$forest[[1]][is.na(crf$forest[[1]][,"ite_0"]),]
+
+
+# build the RF from the exported RF parameters
+crf2 <- corf(x=x, y=y, treat=w, orf=crf, trainModel=FALSE)
+names(crf2)  
+dim(crf2$forest[[1]])
+crf2$forest[[1]]
+
+rbind(crf$forest[[1]][1,],
+      crf2$forest[[1]][1,])
+
+
+### compare stats coming out of the forest
+#with train() function commented out - this code checks that the RF is properly built and then exported
+crf$oobe == crf2$oobe
+crf$n == crf2$n
+length(crf$hyperparameters) == length(crf2$hyperparameters)
+for(h in names(crf$hyperparameters)) {
+  print(h)
+  print(crf$hyperparameters[[h]] == crf2$hyperparameters[[h]])
+}
+
+length(crf$forest) == length(crf2$forest)
+
+dim(crf$forest[[1]])
+dim(crf2$forest[[1]])
+
+length(crf$forest[[1]])
+sum(crf$forest[[1]] == crf2$forest[[1]])
+summary(crf2$forest[[1]])
+
+### test with training applied
+crf3 <- corf(x=x, y=y, treat=w, orf=crf, trainModel=TRUE)
+
+#make predictions on original data using original model
+#sourceCpp("orf.cpp")
+crf <- causal_online_random_forest(x=x, y=y, treat=w, numRandomTests = 10, counterThreshold = 100, trainModel = TRUE,
+                                   maxDepth = 20, numTrees = 100, numEpochs = 1, type = "classification", method = "gini", 
+                                   causal = TRUE, findTrainError = TRUE, verbose = TRUE)
+
+crf_pred <- predict_orf(x = x, orfModel=crf)
+length(crf_pred)
+names(crf_pred)
+
+dim(crf_pred$ite)
+head(crf_pred$ite)
+length(crf_pred$ite_all)
+names(crf_pred$ite_all)
+#head(crf_pred$ite_all[[1]])
+mean(crf_pred$ite_all[[1]][1,]); mean(crf_pred$ite_all[[2]][1,])
+
+dim(crf_pred$confidence)
+length(crf_pred$prediction)
+
+#check predictions against actuals
+table(crf_pred$prediction, y)
+mean(y==crf_pred$prediction)
+
+#check the treatment effect identified
+tapply(y, w, mean)
+mean(y[w==1]) - mean(y[w==0])
+
+mean(crf_pred$ite[,"1"])
+
+
+mean(z1 - z0)
+hist(z1 - z0)
+
+hist(crf_pred$ite[,"1"])
+
+plot(crf_pred$ite[,"1"], ites)
+abline(lm(ites~crf_pred$ite[,"1"]), col='red', lty=2)
 
