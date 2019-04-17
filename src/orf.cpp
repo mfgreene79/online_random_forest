@@ -1,9 +1,23 @@
 // -*- C++ -*-
 /*
  * orf.cpp - Online Random Forests linked with Rcpp to R 
- * 
- *  - branch - causal online random forests - corf
- * 
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Written (W) 2019 Michael Greene, mfgreene79@yahoo.com
+ * Copyright (C) 2019 Michael Greene
+
 */
 
 //include the necessary RcppEigen library
@@ -23,17 +37,16 @@
 #include <iostream>
 #include <vector>
 #include <set>
-#include <string>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
 
-#include "corf/data.h"
-#include "corf/classifier.h"
-#include "corf/utilities.h"
-#include "corf/hyperparameters.h"
-#include "corf/experimenter.h"
-#include "corf/online_rf.h"
+#include "data.h"
+#include "classifier.h"
+#include "utilities.h"
+#include "hyperparameters.h"
+#include "experimenter.h"
+#include "online_rf.h"
 
 
 using namespace std;
@@ -183,9 +196,6 @@ List causal_online_random_forest(MatrixXd x, VectorXd y, VectorXd treat,
   } else {
     trainData = make_trainData(x, y);
   }
-//   cout << "m_numSamples: " << trainData.m_numSamples << std::endl;
-//   cout << "m_numFeatures: " << trainData.m_numFeatures << std::endl;
-//   cout << "m_numClasses: " << trainData.m_numClasses << std::endl;
   
   //construct the forest
   Classifier* orf_ = NULL;
@@ -223,25 +233,25 @@ List causal_online_random_forest(MatrixXd x, VectorXd y, VectorXd treat,
 					    "depth", "isLeaf","label","counter",
 					    "parentCounter","numClasses","numRandomTests");
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("labelStats_" + toString(i));
+      	matColNames.push_back("labelStats_" + toString(i));
       }
       matColNames.push_back("bestTest_feature");
       matColNames.push_back("bestTest_threshold");
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_trueStats" + toString(i));
+	      matColNames.push_back("bestTest_trueStats" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_falseStats" + toString(i));
+	      matColNames.push_back("bestTest_falseStats" + toString(i));
       }
       for(int j=0; j < hp.numRandomTests; ++j) {
-	matColNames.push_back("randomTest" + toString(j) + "_feature");
-	matColNames.push_back("randomTest" + toString(j) + "_threshold");
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_trueStats" + toString(i));
-	}
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_falseStats" + toString(i));
-	}
+	      matColNames.push_back("randomTest" + toString(j) + "_feature");
+	      matColNames.push_back("randomTest" + toString(j) + "_threshold");
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_trueStats" + toString(i));
+	      }
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_falseStats" + toString(i));
+	      }
       }
       colnames(outForestMat) = matColNames;
     } else {//causal==true
@@ -251,7 +261,7 @@ List causal_online_random_forest(MatrixXd x, VectorXd y, VectorXd treat,
 					    "depth", "isLeaf","label","counter");
 
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("ite_" + toString(i));
+	      matColNames.push_back("ite_" + toString(i));
       }
       
       matColNames.push_back("treatCounter");
@@ -261,48 +271,47 @@ List causal_online_random_forest(MatrixXd x, VectorXd y, VectorXd treat,
       matColNames.push_back("numRandomTests");
 
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("labelStats_" + toString(i));
+	      matColNames.push_back("labelStats_" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("treatLabelStats_" + toString(i));
+	      matColNames.push_back("treatLabelStats_" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("controlLabelStats_" + toString(i));
+	      matColNames.push_back("controlLabelStats_" + toString(i));
       }
 
       matColNames.push_back("bestTest_feature");
       matColNames.push_back("bestTest_threshold");
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_treatTrueStats" + toString(i));
+	      matColNames.push_back("bestTest_treatTrueStats" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_treatFalseStats" + toString(i));
+	      matColNames.push_back("bestTest_treatFalseStats" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_controlTrueStats" + toString(i));
+	      matColNames.push_back("bestTest_controlTrueStats" + toString(i));
       }
       for(int i=0; i < trainData.m_numClasses; ++i) {
-	matColNames.push_back("bestTest_controlFalseStats" + toString(i));
+	      matColNames.push_back("bestTest_controlFalseStats" + toString(i));
       }
 
       for(int j=0; j < hp.numRandomTests; ++j) {
-	matColNames.push_back("randomTest" + toString(j) + "_feature");
-	matColNames.push_back("randomTest" + toString(j) + "_threshold");
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_treatTrueStats" + toString(i));
-	}
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_treatFalseStats" + toString(i));
-	}
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_controlTrueStats" + toString(i));
-	}
-	for(int i=0; i < trainData.m_numClasses; ++i) {
-	  matColNames.push_back("randomTest" + toString(j) + "_controlFalseStats" + toString(i));
-	}
+	      matColNames.push_back("randomTest" + toString(j) + "_feature");
+	      matColNames.push_back("randomTest" + toString(j) + "_threshold");
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_treatTrueStats" + toString(i));
+	      }
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_treatFalseStats" + toString(i));
+	      }
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_controlTrueStats" + toString(i));
+	      }
+	      for(int i=0; i < trainData.m_numClasses; ++i) {
+	        matColNames.push_back("randomTest" + toString(j) + "_controlFalseStats" + toString(i));
+	      }
       }
 
-      //cout << "matColNames.size(): " << matColNames.size() << "\n";
       colnames(outForestMat) = matColNames;
     } //close causal if
     outForest["tree" + toString(numF)] = outForestMat;
@@ -316,6 +325,9 @@ List causal_online_random_forest(MatrixXd x, VectorXd y, VectorXd treat,
   featList["maxFeatRange"] = featRange.second;
 
   ret["featRange"] = featList;
+
+  //clean up
+  delete orf_;
 
   return(ret);
 }
@@ -467,6 +479,9 @@ List orf(MatrixXd x, VectorXd y, List orfModel, bool trainModel=true) {
   
   ret["featRange"] = featList;
   
+  //clean up
+  delete orf_;
+
   return(ret);
 }
 
@@ -507,7 +522,7 @@ List corf(MatrixXd x, VectorXd y, VectorXd treat, List orfModel, bool trainModel
   const int numClasses = orfModel["numClasses"];
 
   //convert data into DataSet class
-  DataSet trainData = make_trainData(x, y);
+  DataSet trainData = make_trainData(x, y, treat);
   //need to fix num classes in the dataset
   trainData.m_numClasses = numClasses;
 
@@ -626,12 +641,15 @@ List corf(MatrixXd x, VectorXd y, VectorXd treat, List orfModel, bool trainModel
   
   ret["featRange"] = featList;
   
+  //clean up
+  delete orf_;
+
   return(ret);
 }
 
 
 // [[Rcpp::export]]
-List predict_orf(MatrixXd x, List orfModel) {
+List predictOrf(MatrixXd x, List orfModel, bool iteAll=false) {
   List ret;
   
    //construct the hyper parameter class object
@@ -691,32 +709,34 @@ List predict_orf(MatrixXd x, List orfModel) {
     }
   }
 
-  if(hp.causal == true) {
-    //if causal proceed through to extract ITEs from all trees and transform
-    //List - one entry per class
-    // each entry a matrix: one row per row of x, one col per tree
-    List iteList; // one entry per class
+  if(iteAll == true) {
+    if(hp.causal == true) {
+      //if causal proceed through to extract ITEs from all trees and transform
+      //List - one entry per class
+      // each entry a matrix: one row per row of x, one col per tree
+      List iteList; // one entry per class
     
-    for(int nClass=0; nClass < numClasses; ++nClass) {
-      CharacterVector iteNM_colnames;
-      MatrixXd iteMat(x.rows(), hp.numTrees); //rows for trees, cols for classes
-      for(int nTree=0; nTree < hp.numTrees; ++nTree) {
- 	for(int i=0; i < x.rows(); ++i) {
- 	  Result treeRes = res[i];
- 	  MatrixXd iteAllTrees = treeRes.iteAllTrees; //capture values for all trees - one col per class one row per tree
-// 	  //save
- 	  iteMat(i, nTree) = iteAllTrees(nTree, nClass);
- 	}
-	iteNM_colnames.push_back("tree" + toString(nTree));
-      }
+      for(int nClass=0; nClass < numClasses; ++nClass) {
+        CharacterVector iteNM_colnames;
+        MatrixXd iteMat(x.rows(), hp.numTrees); //rows for trees, cols for classes
+        for(int nTree=0; nTree < hp.numTrees; ++nTree) {
+ 	        for(int i=0; i < x.rows(); ++i) {
+ 	          Result treeRes = res[i];
+ 	          MatrixXd iteAllTrees = treeRes.iteAllTrees; //capture values for all trees - one col per class one row per tree
+ 	  //save
+         	  iteMat(i, nTree) = iteAllTrees(nTree, nClass);
+ 	        }
+	        iteNM_colnames.push_back("tree" + toString(nTree));
+        }
        //save to output List
-      NumericMatrix iteNM = wrap(iteMat);
-      colnames(iteNM) = iteNM_colnames;
-      iteList[toString(nClass)] = iteNM;
+        NumericMatrix iteNM = wrap(iteMat);
+        colnames(iteNM) = iteNM_colnames;
+        iteList[toString(nClass)] = iteNM;
+      }
+      ret["ite_all"] = iteList;
     }
-    ret["ite_all"] = iteList;
-  }
-
+  } //close iteAll==true
+  
   NumericMatrix resConfMat = wrap(resConf);
   NumericVector resPredVec = wrap(resPred);
   NumericVector resIteVec;
@@ -738,6 +758,9 @@ List predict_orf(MatrixXd x, List orfModel) {
   ret["confidence"] = resConfMat;
   ret["prediction"] = resPredVec;
   
+  //clean up
+  delete orf_;
+
   return(ret);
 }
 
@@ -754,7 +777,8 @@ int roundup(double x) {
 // [[Rcpp::export]]
 List causal_orf_cv(MatrixXd x, VectorXd y, VectorXd treat, 
 	     int numClasses, int numRandomTests, int counterThreshold, 
-	     int maxDepth, int numTrees, int numEpochs, int nfolds) {
+	     int maxDepth, int numTrees, int numEpochs, int nfolds,
+	     std::string type="classification", std::string method="gini") {
   
   //prepare items to return
   List ret;
@@ -841,10 +865,10 @@ List causal_orf_cv(MatrixXd x, VectorXd y, VectorXd treat,
     List orfModel;
     orfModel = causal_online_random_forest(tr_x, tr_y, tr_treat,
 					   numRandomTests, counterThreshold, 
-					   maxDepth, numTrees, numEpochs);
+					   maxDepth, numTrees, numEpochs, type, method);
   
     //Predict on the test data
-    List preds = predict_orf(tst_x, orfModel);
+    List preds = predictOrf(tst_x, orfModel);
     MatrixXd conf = preds["confidence"];
     VectorXd cls = preds["prediction"];
     MatrixXd ite = preds["ite"];
@@ -880,7 +904,8 @@ List causal_orf_cv(MatrixXd x, VectorXd y, VectorXd treat,
 
 // [[Rcpp::export]]
 List orf_cv(MatrixXd x, VectorXd y, int numClasses, int numRandomTests, 
-	    int counterThreshold, int maxDepth, int numTrees, int numEpochs, int nfolds) {
+	    int counterThreshold, int maxDepth, int numTrees, int numEpochs, int nfolds,
+	    std::string type="classification", std::string method="gini") {
   
   //prepare items to return
   List ret;
@@ -956,10 +981,10 @@ List orf_cv(MatrixXd x, VectorXd y, int numClasses, int numRandomTests,
     List orfModel;
     orfModel = online_random_forest(tr_x, tr_y,
 				    numRandomTests, counterThreshold, 
-				    maxDepth, numTrees, numEpochs);
+				    maxDepth, numTrees, numEpochs, type, method);
   
     //Predict on the test data
-    List preds = predict_orf(tst_x, orfModel);
+    List preds = predictOrf(tst_x, orfModel);
     MatrixXd conf = preds["confidence"];
     VectorXd cls = preds["prediction"];
 
@@ -985,4 +1010,54 @@ List orf_cv(MatrixXd x, VectorXd y, int numClasses, int numRandomTests,
   ret["actuals"] = ret_actuals;
   ret["accurate"] = ret_acc;
   return(ret);
+}
+
+
+// [[Rcpp::export]]
+VectorXd getImps_(List orfModel) {
+  
+   //construct the hyper parameter class object
+   List hpList = orfModel["hyperparameters"];
+  
+  Hyperparameters hp;
+  hp.numRandomTests = hpList["numRandomTests"];
+  hp.counterThreshold = hpList["counterThreshold"];
+  hp.maxDepth = hpList["maxDepth"];
+  hp.numTrees = hpList["numTrees"];
+  hp.numEpochs = hpList["numEpochs"];
+  hp.findTrainError = hpList["findTrainError"];
+  hp.verbose = hpList["verbose"];
+  hp.method = Rcpp::as<std::string>(hpList["method"]);
+  hp.type = Rcpp::as<std::string>(hpList["type"]);
+  hp.causal = hpList["causal"];
+
+  //extract the feature list information that is needed
+  List featList = orfModel["featRange"];
+  VectorXd minFeatRange = featList["minFeatRange"];
+  VectorXd maxFeatRange = featList["maxFeatRange"];
+  
+  //create the vector of matrices that have all the parms
+  vector<MatrixXd> forestParms;
+  List forestList = orfModel["forest"];
+  for(int i=0; i<forestList.size(); ++i) {
+    forestParms.push_back(forestList[i]);
+  }
+  
+  double counter = orfModel["n"];
+  double oobe = orfModel["oobe"];
+  const int numClasses = orfModel["numClasses"];
+  
+  //construct the forest
+  Classifier* orf_ = NULL;
+  orf_ = new OnlineRF(forestParms, hp, numClasses, oobe, counter, minFeatRange, maxFeatRange);
+  
+  //get the feature importances, calculate weighted average
+  MatrixXd featImp = orf_->getFeatureImportance();
+  VectorXd featImpAvg = VectorXd::Zero(minFeatRange.size());
+  for(int i=0; i < minFeatRange.size(); i++) {
+    featImpAvg(i) = featImp(i,0) / featImp(i,1);
+  }
+  
+  
+  return(featImpAvg);
 }

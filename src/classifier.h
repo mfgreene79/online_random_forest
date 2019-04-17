@@ -9,6 +9,18 @@
  * Copyright (C) 2010 Amir Saffari, 
  *                    Institute for Computer Graphics and Vision, 
  *                    Graz University of Technology, Austria
+ *
+ * Modified 2019 Michael Greene, mfgreene79@yahoo.com
+ *  added functionality and enabled ability to connect to R
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
  */
 
 #ifndef CLASSIFIER_H_
@@ -26,7 +38,7 @@ public:
   virtual ~Classifier();
   
   virtual void update(Sample& sample) = 0;
-  virtual vector<MatrixXd> exportParms() = 0; 
+  virtual vector<Eigen::MatrixXd> exportParms() = 0; 
   virtual void eval(Sample& sample, Result& result) = 0;
 
   virtual double getOOBE() = 0;
@@ -38,6 +50,9 @@ public:
   //functions to access and edit the min and max feature ranges
   virtual pair<VectorXd,VectorXd> getFeatRange() = 0;
   virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) = 0;  
+
+  //method for getting the feature importance
+  virtual MatrixXd getFeatureImportance() = 0;
 
   const string name() const {
     return m_name;

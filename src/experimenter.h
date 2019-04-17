@@ -9,6 +9,18 @@
  * Copyright (C) 2010 Amir Saffari, 
  *                    Institute for Computer Graphics and Vision, 
  *                    Graz University of Technology, Austria
+ * 
+ *
+ * Modified 2019 Michael Greene, mfgreene79@yahoo.com
+ *  added functionality and enabled ability to connect to R
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef EXPERIMENTER_H

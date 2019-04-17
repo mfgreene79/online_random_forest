@@ -1,0 +1,13 @@
+Package: corf
+Type: Package
+Title: Causal Online Random Forests
+Version: 1.1.5
+Date: 2019-04-13
+Author: Mike Greene
+Maintainer: Mike Greene <yourfault@somewhere.net>
+Description: The package allows users to create online (i.e., incremental) random forests that learn incrementally from a sample of data points.  Additionally, the package contains a causal online random forest that maximizes splits in the tree based on differences between treatment and control groups.
+License: GNU General Public License v3
+Depends: R (>= 3.5.0)
+Imports: Rcpp (>= 1.0.0), RcppEigen (>= 0.3.3.5.0)
+LinkingTo: Rcpp, RcppEigen
+RoxygenNote: 6.1.1
