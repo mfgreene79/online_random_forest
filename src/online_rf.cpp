@@ -35,14 +35,16 @@
 //version to construct with randomization
 RandomTest::RandomTest(const Hyperparameters& hp,
 		       const int& numClasses, const int& numFeatures, 
-		       const VectorXd &minFeatRange, const VectorXd &maxFeatRange) :
+		       const VectorXd &minFeatRange, const VectorXd &maxFeatRange,
+		       const VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_hp(&hp),
   m_trueCount(0), m_falseCount(0),
   m_trueStats(VectorXd::Zero(numClasses)), m_falseStats(VectorXd::Zero(numClasses)),
   m_treatTrueCount(0), m_treatFalseCount(0),
   m_treatTrueStats(VectorXd::Zero(numClasses)), m_treatFalseStats(VectorXd::Zero(numClasses)),
   m_controlTrueCount(0), m_controlFalseCount(0),
-  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses))
+  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses)),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
  {
   m_feature = floor(randDouble(0, numFeatures));
   m_threshold = randDouble(minFeatRange(m_feature), maxFeatRange(m_feature));
@@ -51,14 +53,16 @@ RandomTest::RandomTest(const Hyperparameters& hp,
 //version to construct from parameters - not causal
 RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses, 
 		       int feature, double threshold,
-		       VectorXd trueStats, VectorXd falseStats) : 
+		       VectorXd trueStats, VectorXd falseStats,
+		       const VectorXd &rootLabelStats, const double &rootCounter) : 
   m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
   m_trueCount(0.0), m_falseCount(0.0),
   m_trueStats(trueStats), m_falseStats(falseStats),
   m_treatTrueCount(0.0), m_treatFalseCount(0.0),
   m_treatTrueStats(VectorXd::Zero(numClasses)), m_treatFalseStats(VectorXd::Zero(numClasses)),
   m_controlTrueCount(0.0), m_controlFalseCount(0.0),
-  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses))
+  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses)),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
 {
   m_trueCount = m_trueStats.sum();
   m_falseCount = m_falseStats.sum();
@@ -68,13 +72,15 @@ RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses,
 RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses, 
 		       int feature, double threshold,
 		       VectorXd treatTrueStats, VectorXd treatFalseStats,
-		       VectorXd controlTrueStats, VectorXd controlFalseStats) : 
+		       VectorXd controlTrueStats, VectorXd controlFalseStats,
+		       const VectorXd &rootLabelStats, const double &rootCounter) : 
   m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
   m_treatTrueStats(treatTrueStats), m_treatFalseStats(treatFalseStats),
   m_controlTrueStats(controlTrueStats), m_controlFalseStats(controlFalseStats),
   m_trueStats(VectorXd::Zero(numClasses)), m_falseStats(VectorXd::Zero(numClasses)),
   m_trueCount(0), m_falseCount(0), m_treatTrueCount(0), m_treatFalseCount(0),
-  m_controlTrueCount(0), m_controlFalseCount(0)
+  m_controlTrueCount(0), m_controlFalseCount(0),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
 {
 
   for(int i=0; i < numClasses; ++i) {
@@ -102,124 +108,100 @@ bool RandomTest::eval(const Sample& sample) const {
     return (sample.x(m_feature) > m_threshold) ? true : false;
 }
 
-//self score for importance calculations
-double selfScore(VectorXd stats, int count, string method="gini") { 
-  double out=0.0;
-  int numClasses = stats.size();
-  if(method == "gini") {
-    double score = 0.0, p;
-    if (count) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-        p = stats[nClass] / count;
-        score += p * (1 - p);
-      }
-    }      
-    out = score;
-  } else if(method == "entropy") {
-    double score = 0.0, p;
-    if (count) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-        p = stats[nClass] / count;
-        score += p * log2(p);
-      }
-    out = score;
-    }
-  }
-  return(out);
-}
 
-//non causal version
-double splitScore(VectorXd trueStats, VectorXd falseStats, int trueCount, int falseCount, 
-	     string method="gini") { 
-  double out=0.0;
-  int numClasses = trueStats.size();
-  if(method == "gini") {
-    double trueScore = 0.0, falseScore = 0.0, p;
-    if (trueCount) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-      	p = trueStats[nClass] / trueCount;
-      	trueScore += p * (1 - p);
-      }
-    }      
-    if (falseCount) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-      	p = falseStats[nClass] / falseCount;
-      	falseScore += p * (1 - p);
-      }
-    }      
-    out = (trueCount * trueScore + falseCount * falseScore) / (trueCount + falseCount + 1e-16);
-  } else if(method == "entropy") {
-    double trueScore = 0.0, falseScore = 0.0, p;
-    if (trueCount) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-      	p = trueStats[nClass] / trueCount;
-      	trueScore += p * log2(p);
-      }
-    }      
-    if (falseCount) {
-      for (int nClass = 0; nClass < numClasses; ++nClass) {
-      	p = falseStats[nClass] / falseCount;
-      	falseScore += p * log2(p);
-      }
-    }      
-    out = (trueCount * trueScore + falseCount * falseScore) / (trueCount + falseCount + 1e-16);
-  }
-  return(out);
-}
-
-//causal version - 
-// squared difference between ratios of treatment and control 
-// summed over classes
-// weighted average for left and right sides
-
-double splitScore(VectorXd treatTrueStats, VectorXd treatFalseStats, 
-           int treatTrueCount, int treatFalseCount,
-           VectorXd controlTrueStats, VectorXd controlFalseStats, 
-           int controlTrueCount, int controlFalseCount) { 
-  double out=0.0;
-  int numClasses = treatTrueStats.size();
-  double trueScore = 0.0, falseScore = 0.0, treatP=0.0, controlP=0.0; 
-  //total sum of square difference on the left side
-  if (treatTrueCount > 0 & controlTrueCount > 0) {
-    for (int nClass = 0; nClass < numClasses; nClass++) {
-      treatP = treatTrueStats[nClass] / treatTrueCount;
-      controlP = controlTrueStats[nClass] / controlTrueCount;
-      trueScore += pow(treatP - controlP, 2);
-    }
-  }
-  //total sum of square difference on the right side
-  if (treatFalseCount > 0 & controlFalseCount > 0) {
-    for (int nClass = 0; nClass < numClasses; nClass++) {
-      treatP = treatFalseStats[nClass] / treatFalseCount;
-      controlP = controlFalseStats[nClass] / controlFalseCount;
-      falseScore += pow(treatP - controlP, 2);
-    }
-  }      
-  int trueCount = treatTrueCount + controlTrueCount;
-  int falseCount = treatFalseCount + controlFalseCount;
-  out = (trueCount * trueScore + falseCount * falseScore) / (trueCount + falseCount + 1e-16);
-  return(out);
-}
     
 double RandomTest::score() const {
   double theta; //value to minimize
 
   if(m_hp->causal == true) {
     //score the treatment and control counts
-    theta = splitScore(m_treatTrueStats, m_treatFalseStats, 
-			m_treatTrueCount, m_treatFalseCount,
-			m_controlTrueStats, m_controlFalseStats, 
-			m_controlTrueCount, m_controlFalseCount);
+    //causal version - 
+    // squared difference between ratios of treatment and control 
+    // summed over classes
+    // weighted average for left and right sides
     
+    double theta=0.0;
+    double trueScore = 0.0, falseScore = 0.0, treatP=0.0, controlP=0.0; 
+    //total sum of square difference on the left side
+    if (m_treatTrueCount > 0 & m_controlTrueCount > 0) {
+      for (int nClass = 0; nClass < *m_numClasses; nClass++) {
+	treatP = m_treatTrueStats[nClass] / m_treatTrueCount;
+	controlP = m_controlTrueStats[nClass] / m_controlTrueCount;
+	trueScore += pow(treatP - controlP, 2);
+      }
+    }
+    //total sum of square difference on the right side
+    if (m_treatFalseCount > 0 & m_controlFalseCount > 0) {
+      for (int nClass = 0; nClass < *m_numClasses; nClass++) {
+	treatP = m_treatFalseStats[nClass] / m_treatFalseCount;
+	controlP = m_controlFalseStats[nClass] / m_controlFalseCount;
+	falseScore += pow(treatP - controlP, 2);
+      }
+    }      
+
+    theta = (m_trueCount * trueScore + m_falseCount * falseScore) / (m_trueCount + m_falseCount + 1e-16);
     //searching for minimum.  but goal is to maximize sum of squares
     //so looking to minimize  -SS
     theta = -theta;
+
   } else { //not causal tree
     //minimizing the score directly
-    theta = splitScore(m_trueStats, m_falseStats, 
-		  m_trueCount, m_falseCount, 
-		  m_hp->method);
-  }
+    //non causal version allowing different methods
+    double theta=0.0;
+    if(m_hp->method == "gini") {
+      double trueScore = 0.0, falseScore = 0.0, p;
+      if (m_trueCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p = m_trueStats[nClass] / m_trueCount;
+	  trueScore += p * (1 - p);
+	}
+      }      
+      if (m_falseCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p = m_falseStats[nClass] / m_falseCount;
+	  falseScore += p * (1 - p);
+	}
+      }      
+      theta = (m_trueCount * trueScore + m_falseCount * falseScore) / (m_trueCount + m_falseCount + 1e-16);
+    } else if(m_hp->method == "entropy") {
+      double trueScore = 0.0, falseScore = 0.0, p;
+      if (m_trueCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p = m_trueStats[nClass] / m_trueCount;
+	  if(p > 0) {
+	    trueScore += p * log2(p);
+	  }
+	}
+      }      
+      if (m_falseCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p = m_falseStats[nClass] / m_falseCount;
+	  if(p > 0) {
+	    falseScore += p * log2(p);
+	  }
+	}
+      }      
+      theta = (m_trueCount * trueScore + m_falseCount * falseScore) / (m_trueCount + m_falseCount + 1e-16);
+    } else if(m_hp->method == "hellinger") {
+      double trueScore = 0.0, falseScore = 0.0, p, p_root;
+      VectorXd rootLabelStats = *m_rootLabelStats;
+      if(m_trueCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p_root = rootLabelStats(nClass) / *m_rootCounter;
+	  p = m_trueStats[nClass] / m_trueCount;
+	  trueScore += pow(sqrt(p) - sqrt(p_root),2);
+	}
+      }
+      if(m_falseCount) {
+	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	  p_root = rootLabelStats(nClass) / *m_rootCounter;
+	  p = m_falseStats[nClass] / m_falseCount;
+	  falseScore += pow(sqrt(p) - sqrt(p_root),2);
+	}
+      }
+      theta = sqrt((m_trueCount * trueScore + m_falseCount * falseScore) / (m_trueCount + m_falseCount + 1e-16));     
+    } //close method == hellinger
+  } //if not causal
   return(theta);
 }
     
@@ -291,13 +273,20 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
   m_numNodes(&numNodes), m_treatCounter(0.0), m_controlCounter(0.0),
   m_ite(VectorXd::Zero(numClasses))
 {
+  //create pointers to the labelstats and counter - these will get passed down to child nodes
+  m_rootLabelStats = &m_labelStats;
+  m_rootCounter = &m_counter;
+
   // Creating random tests
   for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
     m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, 
-					   minFeatRange, maxFeatRange));
+					   minFeatRange, maxFeatRange, 
+					   *m_rootLabelStats, *m_rootCounter));
   }  
   setChildNodeNumbers(-1, -1);
   ++numNodes;
+
+
 }
 
     
@@ -306,19 +295,21 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
 		       const int& numFeatures, const VectorXd& minFeatRange, 
 		       const VectorXd& maxFeatRange, 
                        const int& depth, const VectorXd& parentStats, 
-		       int nodeNumber, int parentNodeNumber, int& numNodes) :
+		       int nodeNumber, int parentNodeNumber, int& numNodes,
+		       const VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
   m_counter(0.0), m_parentCounter(parentStats.sum()), m_labelStats(parentStats),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
   m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
   m_treatCounter(0.0), m_controlCounter(0.0),
-  m_ite(VectorXd::Zero(numClasses)) {
+  m_ite(VectorXd::Zero(numClasses)),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
   //calculate the label
   m_labelStats.maxCoeff(&m_label);
   
   // Creating random tests
   for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
-    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange));
+    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange, rootLabelStats, rootCounter));
   }
   setChildNodeNumbers(-1, -1);
   ++numNodes;
@@ -331,7 +322,8 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
                        const int& depth, 
 		       const VectorXd& treatParentStats, 
 		       const VectorXd& controlParentStats, 
-		       int nodeNumber, int parentNodeNumber, int& numNodes) :
+		       int nodeNumber, int parentNodeNumber, int& numNodes,
+		       const VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
   m_counter(0.0), m_parentCounter(0.0), m_treatCounter(treatParentStats.sum()), 
   m_controlCounter(controlParentStats.sum()),
@@ -339,7 +331,8 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
   m_treatLabelStats(treatParentStats), m_controlLabelStats(controlParentStats),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
   m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
-  m_ite(VectorXd::Zero(numClasses)) {
+  m_ite(VectorXd::Zero(numClasses)),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
 
 
   m_treatCounter = treatParentStats.sum();
@@ -365,13 +358,13 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
   
   // Creating random tests
   for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
-    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange));
+    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange, rootLabelStats, rootCounter));
   }
   setChildNodeNumbers(-1, -1);
   ++numNodes;
 }
 
-//version to create from parameters
+//version to create from parameters - root version
 OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 		       const int& numClasses, int& numNodes,
 		       const VectorXd& minFeatRange, const VectorXd& maxFeatRange) : 
@@ -383,6 +376,161 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
   m_ite(VectorXd::Zero(numClasses))
 {
 
+  //extract information about the node from the vector
+  //common information whether causal or not
+  m_nodeNumber = static_cast<int>(nodeParms(0));
+  m_parentNodeNumber = static_cast<int>(nodeParms(1));
+  m_rightChildNodeNumber = static_cast<int>(nodeParms(2));
+  m_leftChildNodeNumber = static_cast<int>(nodeParms(3));
+  m_depth = static_cast<int>(nodeParms(4));
+  m_isLeaf = static_cast<bool>(nodeParms(5));
+  m_label = static_cast<int>(nodeParms(6));
+  m_counter = nodeParms(7);
+  //insert treatCounter and controlCounter  
+
+  m_rootLabelStats = &m_labelStats;
+  m_rootCounter = &m_counter;
+
+  
+  //if causal need to extract treatment and control separately
+  if(m_hp->causal == true) {
+     int pos=8;
+     //ite
+     for(int l=0; l < numClasses; ++l) {
+       m_ite(l) = static_cast<double>(nodeParms(pos+l));
+     }
+    pos=8+numClasses;
+
+    m_treatCounter = nodeParms(pos);
+    m_controlCounter = nodeParms(pos+1);
+    m_parentCounter = nodeParms(pos+2);
+      
+    //copy in information for labelStats
+    pos = 13+numClasses; //skip two positions for stats collected otherwise
+
+    for(int c=0; c < *m_numClasses; ++c) {
+      m_labelStats(c) = nodeParms(pos + c);
+      m_treatLabelStats(c) = nodeParms(pos + c + *m_numClasses);
+      m_controlLabelStats(c) = nodeParms(pos + c + 2 * *m_numClasses);
+    }
+    
+    pos = 13 + 4 * *m_numClasses;
+
+    //set up random tests and best random test
+    //advance by 2 - where the bestTest would be stored
+    VectorXd treatTrueStats = VectorXd::Zero(numClasses);
+    VectorXd treatFalseStats = VectorXd::Zero(numClasses);
+    VectorXd controlTrueStats = VectorXd::Zero(numClasses);
+    VectorXd controlFalseStats = VectorXd::Zero(numClasses);
+    
+    //get the feature and threshold for the best test to point to later 
+    int bt_feat = -1;
+    double bt_threshold = 0;
+    if(m_isLeaf == false) {
+      bt_feat = nodeParms(pos);
+      bt_threshold = nodeParms(pos + 1);
+    } //close isLeaf
+
+    //for all nodes (leaf or not) create the randomtests
+    pos = 15 + 8 * numClasses;
+    RandomTest* rt;
+    for(int i=0; i < m_hp->numRandomTests; ++i) {
+      int feature = nodeParms(pos + i * (2 * (1 + 2 * numClasses)));
+      double threshold = nodeParms(pos + 1 + i * (2 * (1 + 2 * numClasses)));
+      treatTrueStats = VectorXd::Zero(numClasses);
+      treatFalseStats = VectorXd::Zero(numClasses);
+      controlTrueStats = VectorXd::Zero(numClasses);
+      controlFalseStats = VectorXd::Zero(numClasses);
+      for(int j=0; j<numClasses; ++j) {
+	treatTrueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + 2 * numClasses)));
+	treatFalseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + 2 * numClasses)));
+	controlTrueStats(j) = nodeParms(pos + 2 + j + 2 * numClasses + i * (2 * (1 + 2 * numClasses)));
+	controlFalseStats(j) = nodeParms(pos + 2 + j + 3 * numClasses + i * (2 * (1 + 2 * numClasses)));
+      }
+      rt = new RandomTest(hp, numClasses, feature, threshold, 
+			  treatTrueStats, treatFalseStats,
+			  controlTrueStats, controlFalseStats,
+			  *m_rootLabelStats, *m_rootCounter);
+      m_onlineTests.push_back(rt);
+      
+      //added 4/13/2019
+      // check if the best test is the same as this random test.  if so point to it
+      if(m_isLeaf == false) {
+        if(bt_feat == feature & bt_threshold == threshold) {
+          m_bestTest = rt;
+        }
+      }
+    } //close i loop
+    
+  } else { //causal==false
+
+    m_parentCounter = nodeParms(8);
+  
+    //copy in information for labelStats
+    VectorXd labelStats(*m_numClasses);
+
+
+    int pos = 11; //starts at 11 - numClasses and numRandomTests already captured (9 and 10)
+    for(int c=0; c < *m_numClasses; ++c) {
+      labelStats(c) = nodeParms(pos + c);
+    }
+    m_labelStats = labelStats;
+    
+    pos = 11 + *m_numClasses;
+
+    //set up random tests and best random test
+    //advance by 2 - where the bestTest would be stored
+    VectorXd trueStats = VectorXd::Zero(numClasses);
+    VectorXd falseStats = VectorXd::Zero(numClasses);
+    
+    int bt_feat = -1;
+    double bt_threshold = 0;
+    if(m_isLeaf == false) { //when not a leaf create the best test
+      bt_feat = nodeParms(pos);
+      bt_threshold = nodeParms(pos + 1);
+      
+    } //close isLeaf
+
+    //for all nodes (leaf or not) create the randomtests
+    pos = 13 + 3 * numClasses;
+    RandomTest* rt;
+    for(int i=0; i < m_hp->numRandomTests; ++i) {
+      int feature = nodeParms(pos + i * (2 * (1 + numClasses)));
+      double threshold = nodeParms(pos + 1 + i * (2 * (1 + numClasses)));
+      trueStats = VectorXd::Zero(numClasses);
+      falseStats = VectorXd::Zero(numClasses);
+      for(int j=0; j<numClasses; ++j) {
+	trueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + numClasses)));
+	falseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + numClasses)));
+      }
+      rt = new RandomTest(hp, numClasses, feature, threshold, trueStats, falseStats,
+			  *m_rootLabelStats, *m_rootCounter);
+      m_onlineTests.push_back(rt);
+      
+      if(m_isLeaf == false) {
+        if(bt_feat == feature & bt_threshold == threshold) {
+          m_bestTest = rt;
+        }
+      }
+      
+    } //close i loop
+  } //close causal==false
+} //close method
+
+
+//version to create from parameters - after root version
+OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+		       const int& numClasses, int& numNodes,
+		       const VectorXd& minFeatRange, const VectorXd& maxFeatRange,
+		       const VectorXd &rootLabelStats, const double &rootCounter) : 
+  m_hp(&hp), m_numNodes(&numNodes), m_numClasses(&numClasses),
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_labelStats(VectorXd::Zero(numClasses)),
+  m_treatLabelStats(VectorXd::Zero(numClasses)),
+  m_controlLabelStats(VectorXd::Zero(numClasses)),
+  m_ite(VectorXd::Zero(numClasses)),
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
+{
   //extract information about the node from the vector
   //common information whether causal or not
   m_nodeNumber = static_cast<int>(nodeParms(0));
@@ -432,21 +580,6 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     if(m_isLeaf == false) {
       bt_feat = nodeParms(pos);
       bt_threshold = nodeParms(pos + 1);
-        //deprecated 4/13/2019 - making a pointer to one from the random tests instead      
-//       RandomTest* bt;
-//       int feature = nodeParms(pos);
-//       double threshold = nodeParms(pos + 1);
-// 
-//       for(int i=0; i<numClasses; ++i) {
-// 	treatTrueStats(i) = nodeParms(pos + 2 + i);
-// 	treatFalseStats(i) = nodeParms(pos + 2 + i + numClasses);
-// 	controlTrueStats(i) = nodeParms(pos + 2 + i + 2*numClasses);
-// 	controlFalseStats(i) = nodeParms(pos + 2 + i + 3*numClasses);
-//       }
-//       bt = new RandomTest(hp, numClasses, feature, threshold, 
-// 			  treatTrueStats, treatFalseStats,
-// 			  controlTrueStats, controlFalseStats);
-//       m_bestTest = bt;
     } //close isLeaf
 
     //for all nodes (leaf or not) create the randomtests
@@ -467,7 +600,9 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
       }
       rt = new RandomTest(hp, numClasses, feature, threshold, 
 			  treatTrueStats, treatFalseStats,
-			  controlTrueStats, controlFalseStats);
+			  controlTrueStats, controlFalseStats,
+			  rootLabelStats, rootCounter
+			  );
       m_onlineTests.push_back(rt);
       
       //added 4/13/2019
@@ -506,19 +641,6 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
       bt_feat = nodeParms(pos);
       bt_threshold = nodeParms(pos + 1);
       
-      //deprecated 4/13/2019 pointing to a random test instead
-//       RandomTest* bt;
-//       int feature = nodeParms(pos);
-//       double threshold = nodeParms(pos + 1);
-//       VectorXd trueStats(numClasses);
-//       VectorXd falseStats(numClasses);
-//       for(int i=0; i<numClasses; ++i) {
-// 	trueStats(i) = nodeParms(pos + 2 + i);
-// 	falseStats(i) = nodeParms(pos + 2 + i + numClasses);
-//       }
-//       
-//       bt = new RandomTest(hp, numClasses, feature, threshold, trueStats, falseStats);
-//       m_bestTest = bt;
     } //close isLeaf
 
     //for all nodes (leaf or not) create the randomtests
@@ -533,7 +655,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 	trueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + numClasses)));
 	falseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + numClasses)));
       }
-      rt = new RandomTest(hp, numClasses, feature, threshold, trueStats, falseStats);
+      rt = new RandomTest(hp, numClasses, feature, threshold, trueStats, falseStats,
+			  rootLabelStats, rootCounter);
       m_onlineTests.push_back(rt);
       
       if(m_isLeaf == false) {
@@ -544,7 +667,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
       
     } //close i loop
   } //close causal==false
-} //close method
+} // close method
+
     
 OnlineNode::~OnlineNode() {
   if (m_isLeaf == false) {
@@ -631,31 +755,35 @@ void OnlineNode::update(const Sample& sample) {
 	      pair<VectorXd, VectorXd> parentStats = m_bestTest->getStats("all");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
-					  m_minFeatRange->rows(), *m_minFeatRange, 
-					  *m_maxFeatRange, m_depth + 1, 
-					  parentStats.first, newNodeNumber, 
-					  m_nodeNumber, *m_numNodes);
+						m_minFeatRange->rows(), *m_minFeatRange, 
+						*m_maxFeatRange, m_depth + 1, 
+						parentStats.first, newNodeNumber, 
+						m_nodeNumber, *m_numNodes,
+						*m_rootLabelStats, *m_rootCounter);
 	      m_leftChildNode = new OnlineNode(*m_hp, *m_numClasses, m_minFeatRange->rows(),
-					 *m_minFeatRange, *m_maxFeatRange, m_depth + 1,
-					 parentStats.second, newNodeNumber + 1, 
-					 m_nodeNumber, *m_numNodes);
+					       *m_minFeatRange, *m_maxFeatRange, m_depth + 1,
+					       parentStats.second, newNodeNumber + 1, 
+					       m_nodeNumber, *m_numNodes,
+					       *m_rootLabelStats, *m_rootCounter);
       } else { // causal==true
 	      pair<VectorXd, VectorXd> treatParentStats = m_bestTest->getStats("treat");      
 	      pair<VectorXd, VectorXd> controlParentStats = m_bestTest->getStats("control");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
-					  m_minFeatRange->rows(), *m_minFeatRange, 
-					  *m_maxFeatRange, m_depth + 1, 
-					  treatParentStats.first, 
-					  controlParentStats.first, 
-					  newNodeNumber, 
-					  m_nodeNumber, *m_numNodes);
+						m_minFeatRange->rows(), *m_minFeatRange, 
+						*m_maxFeatRange, m_depth + 1, 
+						treatParentStats.first, 
+						controlParentStats.first, 
+						newNodeNumber, 
+						m_nodeNumber, *m_numNodes,
+						*m_rootLabelStats, *m_rootCounter);
 	      m_leftChildNode = new OnlineNode(*m_hp, *m_numClasses, m_minFeatRange->rows(),
-					 *m_minFeatRange, *m_maxFeatRange, m_depth + 1,
-					 treatParentStats.second,
-					 controlParentStats.second,
-					 newNodeNumber + 1, 
-					 m_nodeNumber, *m_numNodes);
+					       *m_minFeatRange, *m_maxFeatRange, m_depth + 1,
+					       treatParentStats.second,
+					       controlParentStats.second,
+					       newNodeNumber + 1, 
+					       m_nodeNumber, *m_numNodes,
+					       *m_rootLabelStats, *m_rootCounter);
 
       }
       
@@ -706,11 +834,13 @@ void OnlineNode::update(const MatrixXd& treeParms) {
       int npv_nodeNumber = static_cast<int>(nodeParmsVec(0));
       if(npv_nodeNumber == m_rightChildNodeNumber) {
 	m_rightChildNode = new OnlineNode(nodeParmsVec, *m_hp, *m_numClasses, *m_numNodes,
-					  *m_minFeatRange, *m_maxFeatRange);
+					  *m_minFeatRange, *m_maxFeatRange,
+					  *m_rootLabelStats, *m_rootCounter);
 	found++;
       } else if(npv_nodeNumber == m_leftChildNodeNumber) {
 	m_leftChildNode = new OnlineNode(nodeParmsVec, *m_hp, *m_numClasses, *m_numNodes,
-					 *m_minFeatRange, *m_maxFeatRange);
+					 *m_minFeatRange, *m_maxFeatRange,
+					 *m_rootLabelStats, *m_rootCounter);
 	found++;
       }
       //once the two nodes have been located stop the looping
@@ -932,6 +1062,53 @@ void OnlineNode::exportChildParms(vector<VectorXd> &treeParmsVector) {
   }
 }
 
+double OnlineNode::getCount() {
+  double out = m_counter + m_parentCounter;
+  return(out);
+}
+
+//self score for importance calculations
+double OnlineNode::score() {
+  VectorXd stats=m_labelStats;
+  int count = m_counter + m_parentCounter; 
+  string method=m_hp->method;
+
+  double out=0.0;
+  int numClasses = stats.size();
+  if(method == "gini") {
+    double score = 0.0, p;
+    if (count) {
+      for (int nClass = 0; nClass < numClasses; ++nClass) {
+        p = stats[nClass] / count;
+        score += p * (1 - p);
+      }
+    }      
+    out = score;
+  } else if(method == "entropy") {
+    double score = 0.0, p;
+    if (count) {
+      for (int nClass = 0; nClass < numClasses; ++nClass) {
+        p = stats[nClass] / count;
+	if(p > 0) {
+	  score += p * log2(p);
+	}
+      }
+    out = score;
+    }
+  } else if(m_hp->method == "hellinger") {
+    double score = 0.0, p, p_root;
+    VectorXd rootLabelStats = *m_rootLabelStats;
+    if(count) {
+      for (int nClass = 0; nClass < numClasses; ++nClass) {
+	p_root = rootLabelStats(nClass) / *m_rootCounter;
+	p = stats[nClass] / count;
+	score += pow(sqrt(p) - sqrt(p_root),2);
+      }
+      out = sqrt(score);
+    }
+  }
+  return(out);
+}
 
 
 void OnlineNode::printInfo() {
@@ -1239,29 +1416,38 @@ void OnlineRF::updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) {
   }
 }
 
-MatrixXd OnlineNode::getFeatureImportance() {
-  //first column is the importance, second column number of obs
-  MatrixXd featImp = MatrixXd::Zero(m_minFeatRange->size(), 2);  
 
-  
-  //if not a leaf, get the importance from the best test (if leaf ignore)
+MatrixXd OnlineNode::getFeatureImportance() {
+  //initialize matrix of zeros to collect the importances
+  //first column is the importance, second column number of obs for weighting
+  MatrixXd featImp = MatrixXd::Zero(m_minFeatRange->size(), 2);  
+  //if not a leaf, get the importances (if leaf ignore)
   if(m_isLeaf == false) {
-    double score = 0;
-    score = m_bestTest->score();
-    if(m_hp->causal == true) { //causal models have negative scores, need to flip to get max variance
-      score = -score; 
-    } else { //if not a causal tree then get change in gini or entropy from parent
-      double self_score = selfScore(m_labelStats, m_counter+m_parentCounter);
-      // cout << "nodeNumber: " << m_nodeNumber << "\n";
-      // cout << "feature: " << m_bestTest->getParms().first << "\n";
-      // cout << "self_score: " << self_score << "\n";
-      // cout << "score: " << score << "\n";
-      score = self_score - score; //positive numbers are better for gini and entropy
-      // cout << "self_score - score: " << score << "\n";
+    //get the importance from the bestTest
+    //    score = m_bestTest->score();
+    double score, selfScore;
+    double rightChildScore = m_rightChildNode->score();
+    double leftChildScore = m_leftChildNode->score();
+    double rightChildCount = m_rightChildNode->getCount();
+    double leftChildCount = m_leftChildNode->getCount();
+    double childrenScore = (rightChildScore * rightChildCount + leftChildScore * leftChildCount) / (rightChildCount + leftChildCount + 1e-16);
+    
+    if(m_hp->causal == true) { //causal models have negative MSE, need to flip to get max variance
+      score = -childrenScore; 
+    } else { //if not a causal tree then get change score from this node to best split
+      selfScore = this->score();
+      score = selfScore - childrenScore; //positive numbers are better for gini and entropy
     }
+
+//     cout << "nodeNumber: " << m_nodeNumber << "\n";
+//     cout << "selfScore: " << selfScore << "\n";
+//     cout << "childrenScore: " << childrenScore << "\n";
+//     cout << "score: " << score << "\n";
+
+    //save into matrix 
     pair<int, double> bt_parms = m_bestTest->getParms();
-    featImp(bt_parms.first, 0) += score * (m_counter+m_parentCounter);
-    featImp(bt_parms.first, 1) += m_counter+m_parentCounter;
+    featImp(bt_parms.first, 0) += score;
+    featImp(bt_parms.first, 1) += this->getCount();
     
     //add child node feature importances
     MatrixXd rc_featImp = m_rightChildNode->getFeatureImportance();
@@ -1283,16 +1469,30 @@ MatrixXd OnlineTree::getFeatureImportance() {
   return(featImp);
 }
 MatrixXd OnlineRF::getFeatureImportance() {
-  //get feature importance from the individual trees
+  //total feature importance from the individual trees
   MatrixXd featImp = MatrixXd::Zero(m_minFeatRange.size(), 2);
+  double totWgtImp=0;
+  double totWgt=0;
 
   for(int nTree = 0; nTree < m_hp->numTrees; nTree++) {
     MatrixXd treeFeatImp = m_trees[nTree]->getFeatureImportance();
-    //total feature importances across the trees
     for(int i=0; i<m_minFeatRange.size(); i++) {
       featImp(i,0) += treeFeatImp(i,0);
       featImp(i,1) += treeFeatImp(i,1);
     }
   }
+
+  //normalize to ensure totaling to 1.0
+      //calculate the total importance for normalizing
+  for(int i=0; i<featImp.rows(); i++) {
+    totWgtImp += featImp(i,0) * featImp(i,1);
+  } 
+
+  //divide by total
+  for(int i=0; i<featImp.rows(); i++) {
+    featImp(i,0) = featImp(i,0) * featImp(i,1) / totWgtImp;
+  } 
+
+
   return(featImp);
 }

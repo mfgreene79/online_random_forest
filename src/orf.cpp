@@ -1051,13 +1051,8 @@ VectorXd getImps_(List orfModel) {
   Classifier* orf_ = NULL;
   orf_ = new OnlineRF(forestParms, hp, numClasses, oobe, counter, minFeatRange, maxFeatRange);
   
-  //get the feature importances, calculate weighted average
+  //get the feature importances, weighted average calculated by the method
   MatrixXd featImp = orf_->getFeatureImportance();
-  VectorXd featImpAvg = VectorXd::Zero(minFeatRange.size());
-  for(int i=0; i < minFeatRange.size(); i++) {
-    featImpAvg(i) = featImp(i,0) / featImp(i,1);
-  }
   
-  
-  return(featImpAvg);
+  return(featImp.col(0));
 }

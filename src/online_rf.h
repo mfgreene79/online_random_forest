@@ -33,18 +33,21 @@ class RandomTest {
 public:
   //Version to initialize with randomization
   RandomTest(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	     const VectorXd &minFeatRange, const VectorXd &maxFeatRange);
+	     const VectorXd &minFeatRange, const VectorXd &maxFeatRange,
+	     const VectorXd &rootLabelStats, const double &rootCounter);
 
   //Version to initialize from a known feature/threshold - not causal
   RandomTest(const Hyperparameters& hp, const int& numClasses, 
 	     int feature, double threshold,
-	     VectorXd trueStats, VectorXd falseStats);
+	     VectorXd trueStats, VectorXd falseStats,
+	     const VectorXd &rootLabelStats, const double &rootCounter);
 
   //Version to initialize from a known feature/threshold - causal 
   RandomTest(const Hyperparameters& hp, const int& numClasses, 
 	     int feature, double threshold,
 	     VectorXd treatTrueStats, VectorXd treatFalseStats,
-	     VectorXd controlTrueStats, VectorXd controlFalseStats
+	     VectorXd controlTrueStats, VectorXd controlFalseStats,
+	     const VectorXd &rootLabelStats, const double &rootCounter
 	     );
   
   void update(const Sample& sample);
@@ -63,6 +66,8 @@ public:
  protected:
   const Hyperparameters* m_hp;
   const int* m_numClasses;
+  const VectorXd* m_rootLabelStats;
+  const double* m_rootCounter;
   int m_feature;
   double m_threshold;
 
@@ -97,19 +102,27 @@ public:
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
 	     const int& depth, const VectorXd& parentStats, 
-	     int nodeNumber, int parentNodeNumber, int& numNodes);
+	     int nodeNumber, int parentNodeNumber, int& numNodes,
+	     const VectorXd &rootLabelStats, const double &rootCounter);
 
   //version to initialize versions below the root node - causal
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
 	     const int& depth, const VectorXd& treatParentStats, 
 	     const VectorXd& controlParentStats, 
-	     int nodeNumber, int parentNodeNumber, int& numNodes);
+	     int nodeNumber, int parentNodeNumber, int& numNodes,
+	     const VectorXd &rootLabelStats, const double &rootCounter);
   
-  //Version to initialize from a vector of information about the node
+  //Version to initialize from a vector of information about the node - root node
   OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 	     const int& numClasses, int& numNodes,
 	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+
+  //Version to initialize from a vector of information about the node - below the root
+  OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+	     const int& numClasses, int& numNodes,
+	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange,
+	     const VectorXd &rootLabelStats, const double &rootCounter);
 
   ~OnlineNode();
     
@@ -132,12 +145,17 @@ public:
   //recursive function to add elements to the vector for each child node
   void exportChildParms(vector<VectorXd> &treeParmsVector);
 
+  //function to score node with labelstats
+  double score();
+  double getCount(); 
+
   void printInfo();
   void print();
 
 
   //recursive function to get feature importances
   MatrixXd getFeatureImportance();
+
 
  private:
   int m_nodeNumber;
@@ -167,8 +185,11 @@ public:
   RandomTest* m_bestTest;
 
   int* m_numNodes; //pointer to tree for number of nodes
+  const VectorXd* m_rootLabelStats;
+  const double* m_rootCounter;
     
   bool shouldISplit() const;
+
 };
 
 

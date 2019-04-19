@@ -30,7 +30,7 @@
 #' @param numTrees Number of trees in the forest.
 #' @param numEpochs Number of epochs for processing during each training step.
 #' @param type Type of Random Forest.  Only `classification` is implemented at this time.
-#' @param method Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.
+#' @param method Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity ($p*(1-p)$), `entropy` for entropy ($p*log_2(p)$), or `hellinger` for the Hellinger distance between the rate at the node and the overall population ($sqrt(p) - sqrt(q)$).
 #' @param causal Is the Random Forest a Causal Random Forest?  Defaults to FALSE.
 #' @param minFeatRange If provided, the minimum expected values for the features.  Must be a vector of the same length as numFeatures.  The min and max feature ranges are used to draw random thresholds when creating random tests at each node.  The forest will expand the range as necessary based on new data.  Defaults to NULL.
 #' @param maxFeatRange If provided, the maximum expected values for the features.  Must be a vector of the same length as numFeatures.  The min and max feature ranges are used to draw random thresholds when creating random tests at each node.  The forest will expand the range as necessary based on new data.  Defaults to NULL.

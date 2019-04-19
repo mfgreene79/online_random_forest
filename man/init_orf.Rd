@@ -27,7 +27,7 @@ init_orf(numClasses, numFeatures, numRandomTests, counterThreshold,
 
 \item{type}{Type of Random Forest.  Only `classification` is implemented at this time.}
 
-\item{method}{Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.}
+\item{method}{Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity ($p*(1-p)$), `entropy` for entropy ($p*log_2(p)$), or `hellinger` for the Hellinger distance between the rate at the node and the overall population ($sqrt(p) - sqrt(q)$).}
 
 \item{causal}{Is the Random Forest a Causal Random Forest?  Defaults to FALSE.}
 
