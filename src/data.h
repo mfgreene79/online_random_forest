@@ -23,6 +23,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <RcppEigen.h>
+//[[Rcpp::depends(RcppEigen)]]
+
+
 #ifndef DATA_H_
 #define DATA_H_
 
@@ -32,8 +36,8 @@
 #include <vector>
 #include <set>
 #include <string>
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
+//#include <eigen3/Eigen/Core>
+//#include <eigen3/Eigen/Dense>
 
 using namespace std;
 using namespace Eigen;
