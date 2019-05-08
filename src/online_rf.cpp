@@ -35,15 +35,15 @@
 //version to construct with randomization
 RandomTest::RandomTest(const Hyperparameters& hp,
 		       const int& numClasses, const int& numFeatures, 
-		       const VectorXd &minFeatRange, const VectorXd &maxFeatRange,
-		       const VectorXd &rootLabelStats, const double &rootCounter) :
+		       const Eigen::VectorXd &minFeatRange, const Eigen::VectorXd &maxFeatRange,
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_hp(&hp),
   m_trueCount(0), m_falseCount(0),
-  m_trueStats(VectorXd::Zero(numClasses)), m_falseStats(VectorXd::Zero(numClasses)),
+  m_trueStats(Eigen::VectorXd::Zero(numClasses)), m_falseStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatTrueCount(0), m_treatFalseCount(0),
-  m_treatTrueStats(VectorXd::Zero(numClasses)), m_treatFalseStats(VectorXd::Zero(numClasses)),
+  m_treatTrueStats(Eigen::VectorXd::Zero(numClasses)), m_treatFalseStats(Eigen::VectorXd::Zero(numClasses)),
   m_controlTrueCount(0), m_controlFalseCount(0),
-  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses)),
+  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses)),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
  {
   m_feature = floor(randDouble(0, numFeatures));
@@ -53,15 +53,15 @@ RandomTest::RandomTest(const Hyperparameters& hp,
 //version to construct from parameters - not causal
 RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses, 
 		       int feature, double threshold,
-		       VectorXd trueStats, VectorXd falseStats,
-		       const VectorXd &rootLabelStats, const double &rootCounter) : 
+		       Eigen::VectorXd trueStats, Eigen::VectorXd falseStats,
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
   m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
   m_trueCount(0.0), m_falseCount(0.0),
   m_trueStats(trueStats), m_falseStats(falseStats),
   m_treatTrueCount(0.0), m_treatFalseCount(0.0),
-  m_treatTrueStats(VectorXd::Zero(numClasses)), m_treatFalseStats(VectorXd::Zero(numClasses)),
+  m_treatTrueStats(Eigen::VectorXd::Zero(numClasses)), m_treatFalseStats(Eigen::VectorXd::Zero(numClasses)),
   m_controlTrueCount(0.0), m_controlFalseCount(0.0),
-  m_controlTrueStats(VectorXd::Zero(numClasses)), m_controlFalseStats(VectorXd::Zero(numClasses)),
+  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses)),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
 {
   m_trueCount = m_trueStats.sum();
@@ -71,13 +71,13 @@ RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses,
 //version to construct from parameters - causal
 RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses, 
 		       int feature, double threshold,
-		       VectorXd treatTrueStats, VectorXd treatFalseStats,
-		       VectorXd controlTrueStats, VectorXd controlFalseStats,
-		       const VectorXd &rootLabelStats, const double &rootCounter) : 
+		       Eigen::VectorXd treatTrueStats, Eigen::VectorXd treatFalseStats,
+		       Eigen::VectorXd controlTrueStats, Eigen::VectorXd controlFalseStats,
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
   m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
   m_treatTrueStats(treatTrueStats), m_treatFalseStats(treatFalseStats),
   m_controlTrueStats(controlTrueStats), m_controlFalseStats(controlFalseStats),
-  m_trueStats(VectorXd::Zero(numClasses)), m_falseStats(VectorXd::Zero(numClasses)),
+  m_trueStats(Eigen::VectorXd::Zero(numClasses)), m_falseStats(Eigen::VectorXd::Zero(numClasses)),
   m_trueCount(0), m_falseCount(0), m_treatTrueCount(0), m_treatFalseCount(0),
   m_controlTrueCount(0), m_controlFalseCount(0),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
@@ -184,7 +184,7 @@ double RandomTest::score() const {
       theta = (m_trueCount * trueScore + m_falseCount * falseScore) / (m_trueCount + m_falseCount + 1e-16);
     } else if(m_hp->method == "hellinger") {
       double trueScore = 0.0, falseScore = 0.0, p, p_root;
-      VectorXd rootLabelStats = *m_rootLabelStats;
+      Eigen::VectorXd rootLabelStats = *m_rootLabelStats;
       if(m_trueCount) {
 	for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
 	  p_root = rootLabelStats(nClass) / *m_rootCounter;
@@ -205,17 +205,17 @@ double RandomTest::score() const {
   return(theta);
 }
     
-pair<VectorXd, VectorXd > RandomTest::getStats(string type) const {
+pair<Eigen::VectorXd, Eigen::VectorXd > RandomTest::getStats(std::string type) const {
   
-  //  VectorXd trueStats, falseStats;
-  pair<VectorXd, VectorXd> outStats;
+  //  Eigen::VectorXd trueStats, falseStats;
+  pair<Eigen::VectorXd, Eigen::VectorXd> outStats;
 
   if(type == "all") {
-    outStats = pair<VectorXd, VectorXd> (m_trueStats, m_falseStats);
+    outStats = pair<Eigen::VectorXd, Eigen::VectorXd> (m_trueStats, m_falseStats);
   } else if(type == "treat") {
-    outStats = pair<VectorXd, VectorXd> (m_treatTrueStats, m_treatFalseStats);
+    outStats = pair<Eigen::VectorXd, Eigen::VectorXd> (m_treatTrueStats, m_treatFalseStats);
   } else if(type == "control") {
-   outStats = pair<VectorXd, VectorXd> (m_controlTrueStats, m_controlFalseStats);
+   outStats = pair<Eigen::VectorXd, Eigen::VectorXd> (m_controlTrueStats, m_controlFalseStats);
   }
   
   return outStats;
@@ -225,7 +225,7 @@ void RandomTest::updateStats(const Sample& sample, const bool& decision) {
   if (decision) {
     m_trueCount += sample.w;
     m_trueStats(sample.y) += sample.w;
-    if(sample.treat == true) {
+    if(sample.W) {
       m_treatTrueCount += sample.w;
       m_treatTrueStats(sample.y) += sample.w;
     } else {
@@ -235,7 +235,7 @@ void RandomTest::updateStats(const Sample& sample, const bool& decision) {
   } else {
     m_falseCount += sample.w;
     m_falseStats(sample.y) += sample.w;
-    if(sample.treat == true) {
+    if(sample.W) {
       m_treatFalseCount += sample.w;
       m_treatFalseStats(sample.y) += sample.w;
     } else {
@@ -262,16 +262,16 @@ void RandomTest::print() {
 
 //version for the root node
 OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses, 
-		       const int& numFeatures, const VectorXd& minFeatRange, 
-		       const VectorXd& maxFeatRange, 
+		       const int& numFeatures, const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
                        const int& depth, int& numNodes) :
   m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
-  m_counter(0.0), m_parentCounter(0.0), m_labelStats(VectorXd::Zero(numClasses)),
-  m_treatLabelStats(VectorXd::Zero(numClasses)), 
-  m_controlLabelStats(VectorXd::Zero(numClasses)),
+  m_counter(0.0), m_parentCounter(0.0), m_labelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)), 
+  m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(0),
   m_numNodes(&numNodes), m_treatCounter(0.0), m_controlCounter(0.0),
-  m_ite(VectorXd::Zero(numClasses))
+  m_ite(Eigen::VectorXd::Zero(numClasses))
 {
   //create pointers to the labelstats and counter - these will get passed down to child nodes
   m_rootLabelStats = &m_labelStats;
@@ -292,17 +292,17 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
     
 //version for those below the root node - not causal
 OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses, 
-		       const int& numFeatures, const VectorXd& minFeatRange, 
-		       const VectorXd& maxFeatRange, 
-                       const int& depth, const VectorXd& parentStats, 
+		       const int& numFeatures, const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
+                       const int& depth, const Eigen::VectorXd& parentStats, 
 		       int nodeNumber, int parentNodeNumber, int& numNodes,
-		       const VectorXd &rootLabelStats, const double &rootCounter) :
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
   m_counter(0.0), m_parentCounter(parentStats.sum()), m_labelStats(parentStats),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
   m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
   m_treatCounter(0.0), m_controlCounter(0.0),
-  m_ite(VectorXd::Zero(numClasses)),
+  m_ite(Eigen::VectorXd::Zero(numClasses)),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
   //calculate the label
   m_labelStats.maxCoeff(&m_label);
@@ -317,21 +317,21 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
 
 //version below the root node - causal tree
 OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses, 
-		       const int& numFeatures, const VectorXd& minFeatRange, 
-		       const VectorXd& maxFeatRange, 
+		       const int& numFeatures, const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
                        const int& depth, 
-		       const VectorXd& treatParentStats, 
-		       const VectorXd& controlParentStats, 
+		       const Eigen::VectorXd& treatParentStats, 
+		       const Eigen::VectorXd& controlParentStats, 
 		       int nodeNumber, int parentNodeNumber, int& numNodes,
-		       const VectorXd &rootLabelStats, const double &rootCounter) :
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
   m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
   m_counter(0.0), m_parentCounter(0.0), m_treatCounter(treatParentStats.sum()), 
   m_controlCounter(controlParentStats.sum()),
-  m_labelStats(VectorXd::Zero(numClasses)),
+  m_labelStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatLabelStats(treatParentStats), m_controlLabelStats(controlParentStats),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
   m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
-  m_ite(VectorXd::Zero(numClasses)),
+  m_ite(Eigen::VectorXd::Zero(numClasses)),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
 
 
@@ -365,15 +365,15 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
 }
 
 //version to create from parameters - root version
-OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
 		       const int& numClasses, int& numNodes,
-		       const VectorXd& minFeatRange, const VectorXd& maxFeatRange) : 
+		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) : 
   m_hp(&hp), m_numNodes(&numNodes), m_numClasses(&numClasses),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
-  m_labelStats(VectorXd::Zero(numClasses)),
-  m_treatLabelStats(VectorXd::Zero(numClasses)),
-  m_controlLabelStats(VectorXd::Zero(numClasses)),
-  m_ite(VectorXd::Zero(numClasses))
+  m_labelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_ite(Eigen::VectorXd::Zero(numClasses))
 {
 
   //extract information about the node from the vector
@@ -418,10 +418,10 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 
     //set up random tests and best random test
     //advance by 2 - where the bestTest would be stored
-    VectorXd treatTrueStats = VectorXd::Zero(numClasses);
-    VectorXd treatFalseStats = VectorXd::Zero(numClasses);
-    VectorXd controlTrueStats = VectorXd::Zero(numClasses);
-    VectorXd controlFalseStats = VectorXd::Zero(numClasses);
+    Eigen::VectorXd treatTrueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd treatFalseStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd controlTrueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd controlFalseStats = Eigen::VectorXd::Zero(numClasses);
     
     //get the feature and threshold for the best test to point to later 
     int bt_feat = -1;
@@ -437,10 +437,10 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     for(int i=0; i < m_hp->numRandomTests; ++i) {
       int feature = nodeParms(pos + i * (2 * (1 + 2 * numClasses)));
       double threshold = nodeParms(pos + 1 + i * (2 * (1 + 2 * numClasses)));
-      treatTrueStats = VectorXd::Zero(numClasses);
-      treatFalseStats = VectorXd::Zero(numClasses);
-      controlTrueStats = VectorXd::Zero(numClasses);
-      controlFalseStats = VectorXd::Zero(numClasses);
+      treatTrueStats = Eigen::VectorXd::Zero(numClasses);
+      treatFalseStats = Eigen::VectorXd::Zero(numClasses);
+      controlTrueStats = Eigen::VectorXd::Zero(numClasses);
+      controlFalseStats = Eigen::VectorXd::Zero(numClasses);
       for(int j=0; j<numClasses; ++j) {
 	treatTrueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + 2 * numClasses)));
 	treatFalseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + 2 * numClasses)));
@@ -467,7 +467,7 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     m_parentCounter = nodeParms(8);
   
     //copy in information for labelStats
-    VectorXd labelStats(*m_numClasses);
+    Eigen::VectorXd labelStats(*m_numClasses);
 
 
     int pos = 11; //starts at 11 - numClasses and numRandomTests already captured (9 and 10)
@@ -480,8 +480,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 
     //set up random tests and best random test
     //advance by 2 - where the bestTest would be stored
-    VectorXd trueStats = VectorXd::Zero(numClasses);
-    VectorXd falseStats = VectorXd::Zero(numClasses);
+    Eigen::VectorXd trueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd falseStats = Eigen::VectorXd::Zero(numClasses);
     
     int bt_feat = -1;
     double bt_threshold = 0;
@@ -497,8 +497,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     for(int i=0; i < m_hp->numRandomTests; ++i) {
       int feature = nodeParms(pos + i * (2 * (1 + numClasses)));
       double threshold = nodeParms(pos + 1 + i * (2 * (1 + numClasses)));
-      trueStats = VectorXd::Zero(numClasses);
-      falseStats = VectorXd::Zero(numClasses);
+      trueStats = Eigen::VectorXd::Zero(numClasses);
+      falseStats = Eigen::VectorXd::Zero(numClasses);
       for(int j=0; j<numClasses; ++j) {
 	trueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + numClasses)));
 	falseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + numClasses)));
@@ -519,16 +519,16 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 
 
 //version to create from parameters - after root version
-OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
 		       const int& numClasses, int& numNodes,
-		       const VectorXd& minFeatRange, const VectorXd& maxFeatRange,
-		       const VectorXd &rootLabelStats, const double &rootCounter) : 
+		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange,
+		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
   m_hp(&hp), m_numNodes(&numNodes), m_numClasses(&numClasses),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
-  m_labelStats(VectorXd::Zero(numClasses)),
-  m_treatLabelStats(VectorXd::Zero(numClasses)),
-  m_controlLabelStats(VectorXd::Zero(numClasses)),
-  m_ite(VectorXd::Zero(numClasses)),
+  m_labelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_ite(Eigen::VectorXd::Zero(numClasses)),
   m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
 {
   //extract information about the node from the vector
@@ -569,10 +569,10 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 
     //set up random tests and best random test
     //advance by 2 - where the bestTest would be stored
-    VectorXd treatTrueStats = VectorXd::Zero(numClasses);
-    VectorXd treatFalseStats = VectorXd::Zero(numClasses);
-    VectorXd controlTrueStats = VectorXd::Zero(numClasses);
-    VectorXd controlFalseStats = VectorXd::Zero(numClasses);
+    Eigen::VectorXd treatTrueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd treatFalseStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd controlTrueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd controlFalseStats = Eigen::VectorXd::Zero(numClasses);
     
     //get the feature and threshold for the best test to point to later 
     int bt_feat = -1;
@@ -588,10 +588,10 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     for(int i=0; i < m_hp->numRandomTests; ++i) {
       int feature = nodeParms(pos + i * (2 * (1 + 2 * numClasses)));
       double threshold = nodeParms(pos + 1 + i * (2 * (1 + 2 * numClasses)));
-      treatTrueStats = VectorXd::Zero(numClasses);
-      treatFalseStats = VectorXd::Zero(numClasses);
-      controlTrueStats = VectorXd::Zero(numClasses);
-      controlFalseStats = VectorXd::Zero(numClasses);
+      treatTrueStats = Eigen::VectorXd::Zero(numClasses);
+      treatFalseStats = Eigen::VectorXd::Zero(numClasses);
+      controlTrueStats = Eigen::VectorXd::Zero(numClasses);
+      controlFalseStats = Eigen::VectorXd::Zero(numClasses);
       for(int j=0; j<numClasses; ++j) {
 	treatTrueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + 2 * numClasses)));
 	treatFalseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + 2 * numClasses)));
@@ -619,7 +619,7 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     m_parentCounter = nodeParms(8);
   
     //copy in information for labelStats
-    VectorXd labelStats(*m_numClasses);
+    Eigen::VectorXd labelStats(*m_numClasses);
 
 
     int pos = 11; //starts at 11 - numClasses and numRandomTests already captured (9 and 10)
@@ -632,8 +632,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
 
     //set up random tests and best random test
     //advance by 2 - where the bestTest would be stored
-    VectorXd trueStats = VectorXd::Zero(numClasses);
-    VectorXd falseStats = VectorXd::Zero(numClasses);
+    Eigen::VectorXd trueStats = Eigen::VectorXd::Zero(numClasses);
+    Eigen::VectorXd falseStats = Eigen::VectorXd::Zero(numClasses);
     
     int bt_feat = -1;
     double bt_threshold = 0;
@@ -649,8 +649,8 @@ OnlineNode::OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
     for(int i=0; i < m_hp->numRandomTests; ++i) {
       int feature = nodeParms(pos + i * (2 * (1 + numClasses)));
       double threshold = nodeParms(pos + 1 + i * (2 * (1 + numClasses)));
-      trueStats = VectorXd::Zero(numClasses);
-      falseStats = VectorXd::Zero(numClasses);
+      trueStats = Eigen::VectorXd::Zero(numClasses);
+      falseStats = Eigen::VectorXd::Zero(numClasses);
       for(int j=0; j<numClasses; ++j) {
 	trueStats(j) = nodeParms(pos + 2 + j + i * (2 * (1 + numClasses)));
 	falseStats(j) = nodeParms(pos + 2 + j + numClasses + i * (2 * (1 + numClasses)));
@@ -694,7 +694,7 @@ void OnlineNode::update(const Sample& sample) {
 
   //increment treatment and control stats if a causal tree
   if(m_hp->causal == true) {
-    if(sample.treat == true) {
+    if(sample.W) {
       m_treatCounter += sample.w;
       m_treatLabelStats(sample.y) += sample.w;
     } else {
@@ -752,7 +752,7 @@ void OnlineNode::update(const Sample& sample) {
 
       // Split - initializing with versions beyond the root node
       if(m_hp->causal == false) {
-	      pair<VectorXd, VectorXd> parentStats = m_bestTest->getStats("all");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> parentStats = m_bestTest->getStats("all");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
 						m_minFeatRange->rows(), *m_minFeatRange, 
@@ -766,8 +766,8 @@ void OnlineNode::update(const Sample& sample) {
 					       m_nodeNumber, *m_numNodes,
 					       *m_rootLabelStats, *m_rootCounter);
       } else { // causal==true
-	      pair<VectorXd, VectorXd> treatParentStats = m_bestTest->getStats("treat");      
-	      pair<VectorXd, VectorXd> controlParentStats = m_bestTest->getStats("control");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> treatParentStats = m_bestTest->getStats("treat");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> controlParentStats = m_bestTest->getStats("control");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
 						m_minFeatRange->rows(), *m_minFeatRange, 
@@ -807,12 +807,12 @@ void OnlineNode::eval(const Sample& sample, Result& result) {
       if(m_hp->causal == true) {
 	result.ite = m_ite;
       } else {
-	result.ite = VectorXd::Zero(*m_numClasses);
+	result.ite = Eigen::VectorXd::Zero(*m_numClasses);
       }
     } else {
-      result.confidence = VectorXd::Constant(m_labelStats.rows(), 1.0 / *m_numClasses);
+      result.confidence = Eigen::VectorXd::Constant(m_labelStats.rows(), 1.0 / *m_numClasses);
       result.prediction = 0;
-      result.ite = VectorXd::Zero(*m_numClasses);
+      result.ite = Eigen::VectorXd::Zero(*m_numClasses);
     }
   } else {
     if (m_bestTest->eval(sample)) {
@@ -824,13 +824,13 @@ void OnlineNode::eval(const Sample& sample, Result& result) {
 }
 
 //version of update to grow from a set of parameters
-void OnlineNode::update(const MatrixXd& treeParms) {
+void OnlineNode::update(const Eigen::MatrixXd& treeParms) {
   if(m_isLeaf == false) { // if its a leaf then theres no splitting to do
     
     //search through matrix of parms to find the correct rows and make node parms
     int found=0;
     for(int i=0; i < treeParms.rows(); ++i) {
-      VectorXd nodeParmsVec = treeParms.row(i);
+      Eigen::VectorXd nodeParmsVec = treeParms.row(i);
       int npv_nodeNumber = static_cast<int>(nodeParmsVec(0));
       if(npv_nodeNumber == m_rightChildNodeNumber) {
 	m_rightChildNode = new OnlineNode(nodeParmsVec, *m_hp, *m_numClasses, *m_numNodes,
@@ -869,7 +869,7 @@ bool OnlineNode::shouldISplit() const {
   }
 }
 
-VectorXd OnlineNode::exportParms() {
+Eigen::VectorXd OnlineNode::exportParms() {
   //create vector to export
   
   //see layout spreadsheet for accounting of length
@@ -879,7 +879,7 @@ VectorXd OnlineNode::exportParms() {
   } else {
     vec_size = 13 + 3 * *m_numClasses + 2 * m_hp->numRandomTests * (1 + *m_numClasses);
   }
-  VectorXd nodeParms = VectorXd::Zero(vec_size);  //initialize the vector with zeros
+  Eigen::VectorXd nodeParms = Eigen::VectorXd::Zero(vec_size);  //initialize the vector with zeros
   
   //fetch the private parameters and save into the Node parms object
   int pos = 0;
@@ -918,8 +918,8 @@ VectorXd OnlineNode::exportParms() {
     pos = 13 + 4 * *m_numClasses;
 
     pair<int, double> bt_parms;
-    pair<VectorXd, VectorXd> bt_treatStats;
-    pair<VectorXd, VectorXd> bt_controlStats;
+    pair<Eigen::VectorXd, Eigen::VectorXd> bt_treatStats;
+    pair<Eigen::VectorXd, Eigen::VectorXd> bt_controlStats;
     if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
       bt_parms = m_bestTest->getParms();
       bt_treatStats = m_bestTest->getStats("treat");
@@ -927,11 +927,11 @@ VectorXd OnlineNode::exportParms() {
     } else { //otherwise use zeros (and -1 for the feature)
       int bt1 = -1;
       double bt2 = 0;
-      VectorXd bt3 = VectorXd::Zero(*m_numClasses);
+      Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);
 
       bt_parms = pair<int, double> (bt1, bt2);
-      bt_treatStats=pair<VectorXd, VectorXd> (bt3, bt3);
-      bt_controlStats=pair<VectorXd, VectorXd> (bt3, bt3);
+      bt_treatStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
+      bt_controlStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
     }
     //write bt information to the vector
     nodeParms(pos) = bt_parms.first;
@@ -940,10 +940,10 @@ VectorXd OnlineNode::exportParms() {
     //copy the information from trueStats and falseStats into the parms
     //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
     pos = 15 + 4 * *m_numClasses;
-    VectorXd treatTrueStats = bt_treatStats.first;
-    VectorXd treatFalseStats = bt_treatStats.second;
-    VectorXd controlTrueStats = bt_controlStats.first;
-    VectorXd controlFalseStats = bt_controlStats.second;
+    Eigen::VectorXd treatTrueStats = bt_treatStats.first;
+    Eigen::VectorXd treatFalseStats = bt_treatStats.second;
+    Eigen::VectorXd controlTrueStats = bt_controlStats.first;
+    Eigen::VectorXd controlFalseStats = bt_controlStats.second;
     
     for(int i=0; i < *m_numClasses; ++i) {
       nodeParms(pos+i) = treatTrueStats(i);
@@ -960,17 +960,17 @@ VectorXd OnlineNode::exportParms() {
       
       RandomTest rt = *m_onlineTests[i];
       pair<int, double> rt_parms = rt.getParms();
-      pair<VectorXd, VectorXd> rt_treatStats = rt.getStats("treat");
-      pair<VectorXd, VectorXd> rt_controlStats = rt.getStats("control");
+      pair<Eigen::VectorXd, Eigen::VectorXd> rt_treatStats = rt.getStats("treat");
+      pair<Eigen::VectorXd, Eigen::VectorXd> rt_controlStats = rt.getStats("control");
       //feature
       nodeParms(pos) = static_cast<double>(rt_parms.first);
       //threshold
       nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
       //copy in the true and false stats
-      VectorXd treatTrueStats = rt_treatStats.first;
-      VectorXd treatFalseStats = rt_treatStats.second;
-      VectorXd controlTrueStats = rt_controlStats.first;
-      VectorXd controlFalseStats = rt_controlStats.second;
+      Eigen::VectorXd treatTrueStats = rt_treatStats.first;
+      Eigen::VectorXd treatFalseStats = rt_treatStats.second;
+      Eigen::VectorXd controlTrueStats = rt_controlStats.first;
+      Eigen::VectorXd controlFalseStats = rt_controlStats.second;
       for(int j=0; j < *m_numClasses; ++j) {
 	nodeParms(pos + 2 + j) = treatTrueStats(j);
 	nodeParms(pos + 2 + j + *m_numClasses) = treatFalseStats(j);
@@ -992,18 +992,18 @@ VectorXd OnlineNode::exportParms() {
 
     //layout for causal tree has 4 vectors for each random test
     pair<int, double> bt_parms;
-    pair<VectorXd, VectorXd> bt_stats;
+    pair<Eigen::VectorXd, Eigen::VectorXd> bt_stats;
     if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
       bt_parms = m_bestTest->getParms();
       bt_stats = m_bestTest->getStats();
     } else { //otherwise use zeros (and -1 for the feature)
       int bt1 = -1;
       double bt2 = 0;
-      VectorXd bt3 = VectorXd::Zero(*m_numClasses);;
-      VectorXd bt4 = VectorXd::Zero(*m_numClasses);
+      Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);;
+      Eigen::VectorXd bt4 = Eigen::VectorXd::Zero(*m_numClasses);
 
       bt_parms = pair<int, double> (bt1, bt2);
-      bt_stats=pair<VectorXd, VectorXd> (bt3, bt4);
+      bt_stats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt4);
     }
     //write bt information to the vector
     nodeParms(pos) = bt_parms.first;
@@ -1012,8 +1012,8 @@ VectorXd OnlineNode::exportParms() {
     //copy the information from trueStats and falseStats into the parms
     //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
     pos = 13 + *m_numClasses;
-    VectorXd trueStats = bt_stats.first;
-    VectorXd falseStats = bt_stats.second;
+    Eigen::VectorXd trueStats = bt_stats.first;
+    Eigen::VectorXd falseStats = bt_stats.second;
     
     for(int i=0; i < *m_numClasses; ++i) {
       nodeParms(pos+i) = trueStats(i);
@@ -1028,14 +1028,14 @@ VectorXd OnlineNode::exportParms() {
       
       RandomTest rt = *m_onlineTests[i];
       pair<int, double> rt_parms = rt.getParms();
-      pair<VectorXd, VectorXd> rt_stats = rt.getStats();
+      pair<Eigen::VectorXd, Eigen::VectorXd> rt_stats = rt.getStats();
       //feature
       nodeParms(pos) = static_cast<double>(rt_parms.first);
       //threshold
       nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
       //copy in the true and false stats
-      VectorXd trueStats = rt_stats.first;
-      VectorXd falseStats = rt_stats.second;
+      Eigen::VectorXd trueStats = rt_stats.first;
+      Eigen::VectorXd falseStats = rt_stats.second;
       for(int j=0; j < *m_numClasses; ++j) {
 	nodeParms(pos + 2 + j) = trueStats(j);
 	nodeParms(pos + 2 + j + *m_numClasses) = falseStats(j);
@@ -1046,14 +1046,14 @@ VectorXd OnlineNode::exportParms() {
 }
 
 //method to recursively return information - updating matrix at the tree level
-void OnlineNode::exportChildParms(vector<VectorXd> &treeParmsVector) {
+void OnlineNode::exportChildParms(vector<Eigen::VectorXd> &treeParmsVector) {
   //add the right and left child parms to parms for the tree
   if(m_isLeaf == false) {
     //collect and export the parms if this is not a leaf
-    VectorXd rightParms = m_rightChildNode->exportParms();
+    Eigen::VectorXd rightParms = m_rightChildNode->exportParms();
     treeParmsVector.push_back(rightParms);
 
-    VectorXd leftParms = m_leftChildNode->exportParms();
+    Eigen::VectorXd leftParms = m_leftChildNode->exportParms();
     treeParmsVector.push_back(leftParms);
 
     //recurse to the next level if NOT a leaf
@@ -1069,9 +1069,9 @@ double OnlineNode::getCount() {
 
 //self score for importance calculations
 double OnlineNode::score() {
-  VectorXd stats=m_labelStats;
+  Eigen::VectorXd stats=m_labelStats;
   int count = m_counter + m_parentCounter; 
-  string method=m_hp->method;
+  std::string method=m_hp->method;
 
   double out=0.0;
   int numClasses = stats.size();
@@ -1097,7 +1097,7 @@ double OnlineNode::score() {
     }
   } else if(m_hp->method == "hellinger") {
     double score = 0.0, p, p_root;
-    VectorXd rootLabelStats = *m_rootLabelStats;
+    Eigen::VectorXd rootLabelStats = *m_rootLabelStats;
     if(count) {
       for (int nClass = 0; nClass < numClasses; ++nClass) {
 	p_root = rootLabelStats(nClass) / *m_rootCounter;
@@ -1131,9 +1131,9 @@ void OnlineNode::print() {
 //version to construct with randomization
 OnlineTree::OnlineTree(const Hyperparameters& hp, const int& numClasses, 
 		       const int& numFeatures, 
-                       const VectorXd& minFeatRange, const VectorXd& maxFeatRange) :
-  Classifier(hp, numClasses), m_numClasses(&numClasses), m_hp(&hp),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
+                       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) :
+  //  Classifier(hp, numClasses), 
+  m_numClasses(&numClasses), m_hp(&hp), m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
   
   //initialize here - will get updated later in the program during update
   m_oobe = 0.0;
@@ -1147,10 +1147,11 @@ OnlineTree::OnlineTree(const Hyperparameters& hp, const int& numClasses,
 }
 
 //version to construct from a set of parameters
-OnlineTree::OnlineTree(const MatrixXd& treeParms, const Hyperparameters& hp, 
+OnlineTree::OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& hp, 
 		       const int& numClasses, double oobe, double counter,
-		       const VectorXd& minFeatRange, const VectorXd& maxFeatRange) :
-  Classifier(hp, treeParms(0,9)), m_hp(&hp),
+		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) :
+  //  Classifier(hp, treeParms(0,9)), 
+  m_hp(&hp),
   m_oobe(oobe), m_counter(counter), 
   m_numClasses(&numClasses), m_numNodes(0),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
@@ -1193,16 +1194,16 @@ void OnlineTree::eval(Sample& sample, Result& result) {
     m_rootNode->eval(sample, result);
 }
 
-vector<MatrixXd> OnlineTree::exportParms() {
-  vector<MatrixXd> ret;
+vector<Eigen::MatrixXd> OnlineTree::exportParms() {
+  vector<Eigen::MatrixXd> ret;
 
   if(m_numNodes > 0) {
-    VectorXd nodeParms;
+    Eigen::VectorXd nodeParms;
     nodeParms = m_rootNode->exportParms(); // parms for the root node
-    MatrixXd treeParms(m_numNodes, nodeParms.size()); // matrix to collect everything
+    Eigen::MatrixXd treeParms(m_numNodes, nodeParms.size()); // matrix to collect everything
   
     //initialize the collector of tree information
-    vector<VectorXd> treeParmsVector;
+    vector<Eigen::VectorXd> treeParmsVector;
   
     //add information from the root node to the vector
     treeParmsVector.push_back(nodeParms);
@@ -1212,12 +1213,11 @@ vector<MatrixXd> OnlineTree::exportParms() {
        m_rootNode->exportChildParms(treeParmsVector);
      }
 
-    //combine information from the vector back into the MatrixXd
+    //combine information from the vector back into the Eigen::MatrixXd
     for(int i=0; i < treeParmsVector.size(); ++i) {
       treeParms.row(i) = treeParmsVector[i];
     }
   
-    //return a vector since classifier requires
     ret.push_back(treeParms);
   }
   return(ret);
@@ -1230,7 +1230,7 @@ void OnlineTree::printInfo() {
 
 void OnlineTree::print() {
   cout << "Tree details: " << std::endl;
-  vector<MatrixXd> treeParms = exportParms();
+  vector<Eigen::MatrixXd> treeParms = exportParms();
   if(treeParms.size() > 0) {
     cout << treeParms[0] << std::endl;
   }
@@ -1244,14 +1244,14 @@ double OnlineTree::getCounter() {
   return(m_counter);
 }
 
-pair<VectorXd,VectorXd> OnlineTree::getFeatRange() {
-  return(pair<VectorXd, VectorXd> (*m_minFeatRange, *m_maxFeatRange));
+pair<Eigen::VectorXd,Eigen::VectorXd> OnlineTree::getFeatRange() {
+  return(pair<Eigen::VectorXd, Eigen::VectorXd> (*m_minFeatRange, *m_maxFeatRange));
 }
 
-void OnlineTree::updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) {
+void OnlineTree::updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) {
   //update the min and max feature range to extend if needed
-  VectorXd newMinFeatRange = *m_minFeatRange;
-  VectorXd newMaxFeatRange = *m_maxFeatRange;
+  Eigen::VectorXd newMinFeatRange = *m_minFeatRange;
+  Eigen::VectorXd newMaxFeatRange = *m_maxFeatRange;
 
   for(int i=0; i < minFeatRange.size(); ++i) {
     if(minFeatRange(i) < newMinFeatRange(i)) {
@@ -1275,8 +1275,9 @@ void OnlineTree::updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) {
 
 //version to construct using randomization
 OnlineRF::OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures,
-		   VectorXd minFeatRange, VectorXd maxFeatRange) :
-  Classifier(hp, numClasses), m_counter(0.0), m_oobe(0.0), m_numClasses(&numClasses), 
+		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
+  //Classifier(hp, numClasses), 
+  m_counter(0.0), m_oobe(0.0), m_numClasses(&numClasses), 
   m_hp(&hp), m_minFeatRange(minFeatRange), m_maxFeatRange(maxFeatRange) {
   OnlineTree *tree;
   for (int nTree = 0; nTree < hp.numTrees; ++nTree) {
@@ -1287,10 +1288,11 @@ OnlineRF::OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& 
 }
 
 //version to construction from a set of parameters
-OnlineRF::OnlineRF(const vector<MatrixXd> orfParms, const Hyperparameters& hp,
+OnlineRF::OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters& hp,
 		   const int& numClasses, double oobe, double counter,
-		   VectorXd minFeatRange, VectorXd maxFeatRange) :
-  Classifier(hp, numClasses), m_counter(counter), m_oobe(oobe),
+		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
+  //Classifier(hp, numClasses), 
+  m_counter(counter), m_oobe(oobe),
   m_hp(&hp), m_numClasses(&numClasses),
   m_minFeatRange(minFeatRange), m_maxFeatRange(maxFeatRange) {
   OnlineTree *tree;
@@ -1337,7 +1339,7 @@ void OnlineRF::update(Sample& sample) {
 
 void OnlineRF::eval(Sample& sample, Result& result) {
   Result treeResult;
-  MatrixXd iteAll(m_hp->numTrees, *m_numClasses);
+  Eigen::MatrixXd iteAll(m_hp->numTrees, *m_numClasses);
 
   for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
     //calculate the prediction for the tree
@@ -1368,10 +1370,10 @@ void OnlineRF::eval(Sample& sample, Result& result) {
 }
 
 //return the parameters updated by the update method
-vector<MatrixXd> OnlineRF::exportParms() {
-  vector<MatrixXd> out;
+vector<Eigen::MatrixXd> OnlineRF::exportParms() {
+  vector<Eigen::MatrixXd> out;
   for(int nTree=0; nTree < m_trees.size(); ++nTree) {
-    vector<MatrixXd> treeParmsVec = m_trees[nTree]->exportParms();
+    vector<Eigen::MatrixXd> treeParmsVec = m_trees[nTree]->exportParms();
     out.push_back(treeParmsVec[0]);
   }
   return(out);
@@ -1392,7 +1394,7 @@ void OnlineRF::printInfo() {
 
 void OnlineRF::print() {
   cout << "RF details: " << std::endl;  
-  vector<MatrixXd> rfParms = exportParms();
+  vector<Eigen::MatrixXd> rfParms = exportParms();
   for(int nTree=0; nTree < rfParms.size(); ++nTree) {
     cout << "\tTree: " << nTree << std::endl;
     cout << "\t\t";
@@ -1400,11 +1402,11 @@ void OnlineRF::print() {
   }
 }
 
-pair<VectorXd,VectorXd> OnlineRF::getFeatRange() {
-  return(pair<VectorXd, VectorXd> (m_minFeatRange, m_maxFeatRange));
+pair<Eigen::VectorXd,Eigen::VectorXd> OnlineRF::getFeatRange() {
+  return(pair<Eigen::VectorXd, Eigen::VectorXd> (m_minFeatRange, m_maxFeatRange));
 }
 
-void OnlineRF::updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) {
+void OnlineRF::updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) {
   //update the min and max feature range to extend if needed
   for(int i=0; i < minFeatRange.size(); ++i) {
     if(minFeatRange(i) < m_minFeatRange(i)) {
@@ -1417,10 +1419,10 @@ void OnlineRF::updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange) {
 }
 
 
-MatrixXd OnlineNode::getFeatureImportance() {
+Eigen::MatrixXd OnlineNode::getFeatureImportance() {
   //initialize matrix of zeros to collect the importances
   //first column is the importance, second column number of obs for weighting
-  MatrixXd featImp = MatrixXd::Zero(m_minFeatRange->size(), 2);  
+  Eigen::MatrixXd featImp = Eigen::MatrixXd::Zero(m_minFeatRange->size(), 2);  
   //if not a leaf, get the importances (if leaf ignore)
   if(m_isLeaf == false) {
     //get the importance from the bestTest
@@ -1450,8 +1452,8 @@ MatrixXd OnlineNode::getFeatureImportance() {
     featImp(bt_parms.first, 1) += this->getCount();
     
     //add child node feature importances
-    MatrixXd rc_featImp = m_rightChildNode->getFeatureImportance();
-    MatrixXd lc_featImp = m_leftChildNode->getFeatureImportance();
+    Eigen::MatrixXd rc_featImp = m_rightChildNode->getFeatureImportance();
+    Eigen::MatrixXd lc_featImp = m_leftChildNode->getFeatureImportance();
 
     for(int i=0; i < m_minFeatRange->size(); i++) {
        featImp(i,0) += rc_featImp(i,0);
@@ -1463,19 +1465,19 @@ MatrixXd OnlineNode::getFeatureImportance() {
   return(featImp);
 }
 
-MatrixXd OnlineTree::getFeatureImportance() {
+Eigen::MatrixXd OnlineTree::getFeatureImportance() {
   //go through each node recursively to get the feature importances
-  MatrixXd featImp = m_rootNode->getFeatureImportance();
+  Eigen::MatrixXd featImp = m_rootNode->getFeatureImportance();
   return(featImp);
 }
-MatrixXd OnlineRF::getFeatureImportance() {
+
+Eigen::MatrixXd OnlineRF::getFeatureImportance() {
   //total feature importance from the individual trees
-  MatrixXd featImp = MatrixXd::Zero(m_minFeatRange.size(), 2);
+  Eigen::MatrixXd featImp = Eigen::MatrixXd::Zero(m_minFeatRange.size(), 2);
   double totWgtImp=0;
-  double totWgt=0;
 
   for(int nTree = 0; nTree < m_hp->numTrees; nTree++) {
-    MatrixXd treeFeatImp = m_trees[nTree]->getFeatureImportance();
+    Eigen::MatrixXd treeFeatImp = m_trees[nTree]->getFeatureImportance();
     for(int i=0; i<m_minFeatRange.size(); i++) {
       featImp(i,0) += treeFeatImp(i,0);
       featImp(i,1) += treeFeatImp(i,1);
@@ -1492,7 +1494,40 @@ MatrixXd OnlineRF::getFeatureImportance() {
   for(int i=0; i<featImp.rows(); i++) {
     featImp(i,0) = featImp(i,0) * featImp(i,1) / totWgtImp;
   } 
-
-
   return(featImp);
+}
+
+/// Method for training model with data
+void OnlineRF::train(DataSet& dataset) {
+  vector<int> randIndex;
+  int sampRatio = dataset.m_numSamples / 10;
+  vector<double> trainError(m_hp->numEpochs, 0.0);
+  for (int nEpoch = 0; nEpoch < m_hp->numEpochs; ++nEpoch) {
+    //permute the dataset
+    randPerm(dataset.m_numSamples, randIndex);
+    for (int nSamp = 0; nSamp < dataset.m_numSamples; ++nSamp) {
+      if (m_hp->findTrainError == true) {
+	// 	Result result(dataset.m_numClasses);
+ 	Result result(dataset.m_numClasses);
+ 	this->eval(dataset.m_samples[randIndex[nSamp]], result);
+ 	if (result.prediction != dataset.m_samples[randIndex[nSamp]].y) {
+ 	  trainError[nEpoch]++;
+ 	}
+      }
+      //update RF with datapoint
+      this->update(dataset.m_samples[randIndex[nSamp]]);
+    } //close nSamp loop
+  } //close epoch loop 
+} //close method
+
+//// method for providing predictions from the model
+vector<Result> OnlineRF::test(DataSet& dataset) {
+    vector<Result> results;
+    for (int nSamp = 0; nSamp < dataset.m_numSamples; nSamp++) {
+        Result result(dataset.m_numClasses);
+	this->eval(dataset.m_samples[nSamp], result);
+        results.push_back(result);
+    }
+    //    double error = compError(results, dataset);
+    return results;
 }

@@ -24,7 +24,6 @@
 #ifndef ONLINERF_H_
 #define ONLINERF_H_
 
-#include "classifier.h"
 #include "data.h"
 #include "hyperparameters.h"
 #include "utilities.h"
@@ -33,21 +32,21 @@ class RandomTest {
 public:
   //Version to initialize with randomization
   RandomTest(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	     const VectorXd &minFeatRange, const VectorXd &maxFeatRange,
-	     const VectorXd &rootLabelStats, const double &rootCounter);
+	     const Eigen::VectorXd &minFeatRange, const Eigen::VectorXd &maxFeatRange,
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
 
   //Version to initialize from a known feature/threshold - not causal
   RandomTest(const Hyperparameters& hp, const int& numClasses, 
 	     int feature, double threshold,
-	     VectorXd trueStats, VectorXd falseStats,
-	     const VectorXd &rootLabelStats, const double &rootCounter);
+	     Eigen::VectorXd trueStats, Eigen::VectorXd falseStats,
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
 
   //Version to initialize from a known feature/threshold - causal 
   RandomTest(const Hyperparameters& hp, const int& numClasses, 
 	     int feature, double threshold,
-	     VectorXd treatTrueStats, VectorXd treatFalseStats,
-	     VectorXd controlTrueStats, VectorXd controlFalseStats,
-	     const VectorXd &rootLabelStats, const double &rootCounter
+	     Eigen::VectorXd treatTrueStats, Eigen::VectorXd treatFalseStats,
+	     Eigen::VectorXd controlTrueStats, Eigen::VectorXd controlFalseStats,
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter
 	     );
   
   void update(const Sample& sample);
@@ -58,7 +57,7 @@ public:
   
   pair<int,double> getParms();
   
-  pair<VectorXd, VectorXd > getStats(string type = "all") const;
+  pair<Eigen::VectorXd, Eigen::VectorXd > getStats(std::string type = "all") const;
 
   void print();
 
@@ -66,7 +65,7 @@ public:
  protected:
   const Hyperparameters* m_hp;
   const int* m_numClasses;
-  const VectorXd* m_rootLabelStats;
+  const Eigen::VectorXd* m_rootLabelStats;
   const double* m_rootCounter;
   int m_feature;
   double m_threshold;
@@ -74,20 +73,20 @@ public:
   //total counts and stats
   int m_trueCount;
   int m_falseCount;
-  VectorXd m_trueStats;
-  VectorXd m_falseStats;
+  Eigen::VectorXd m_trueStats;
+  Eigen::VectorXd m_falseStats;
     
   //treatment counts and stats
   int m_treatTrueCount;
   int m_treatFalseCount;
-  VectorXd m_treatTrueStats;
-  VectorXd m_treatFalseStats;
+  Eigen::VectorXd m_treatTrueStats;
+  Eigen::VectorXd m_treatFalseStats;
 
   //control counts and stats
   int m_controlTrueCount;
   int m_controlFalseCount;
-  VectorXd m_controlTrueStats;
-  VectorXd m_controlFalseStats;
+  Eigen::VectorXd m_controlTrueStats;
+  Eigen::VectorXd m_controlFalseStats;
   
   void updateStats(const Sample& sample, const bool& decision);
 };
@@ -96,33 +95,33 @@ class OnlineNode {
 public:
   // version to initialize the root node
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
 	     const int& depth, int& numNodes);
   //version to initialize versions below the root node - not causal
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
-	     const int& depth, const VectorXd& parentStats, 
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
+	     const int& depth, const Eigen::VectorXd& parentStats, 
 	     int nodeNumber, int parentNodeNumber, int& numNodes,
-	     const VectorXd &rootLabelStats, const double &rootCounter);
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
 
   //version to initialize versions below the root node - causal
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange, 
-	     const int& depth, const VectorXd& treatParentStats, 
-	     const VectorXd& controlParentStats, 
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
+	     const int& depth, const Eigen::VectorXd& treatParentStats, 
+	     const Eigen::VectorXd& controlParentStats, 
 	     int nodeNumber, int parentNodeNumber, int& numNodes,
-	     const VectorXd &rootLabelStats, const double &rootCounter);
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
   
   //Version to initialize from a vector of information about the node - root node
-  OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+  OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
 	     const int& numClasses, int& numNodes,
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
 
   //Version to initialize from a vector of information about the node - below the root
-  OnlineNode(const VectorXd& nodeParms, const Hyperparameters& hp,
+  OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
 	     const int& numClasses, int& numNodes,
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange,
-	     const VectorXd &rootLabelStats, const double &rootCounter);
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange,
+	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
 
   ~OnlineNode();
     
@@ -134,16 +133,16 @@ public:
 
   //version to grow the node recursively from a matrix of information
 
-  void update(const MatrixXd& treeParms);
+  void update(const Eigen::MatrixXd& treeParms);
 
   //set child node numbers if the split occurs
   void setChildNodeNumbers(int rightChildNodeNumber, int leftChildNodeNumber);
 
   //method to add nodeParms to the matrix of parms for the tree
-  VectorXd exportParms(); //export parms out to a vector
+  Eigen::VectorXd exportParms(); //export parms out to a vector
   
   //recursive function to add elements to the vector for each child node
-  void exportChildParms(vector<VectorXd> &treeParmsVector);
+  void exportChildParms(vector<Eigen::VectorXd> &treeParmsVector);
 
   //function to score node with labelstats
   double score();
@@ -154,7 +153,7 @@ public:
 
 
   //recursive function to get feature importances
-  MatrixXd getFeatureImportance();
+  Eigen::MatrixXd getFeatureImportance();
 
 
  private:
@@ -167,16 +166,16 @@ public:
   bool m_isLeaf;
   const Hyperparameters* m_hp;
   int m_label;
-  VectorXd m_ite; //individual treatment effect - populated if causal tree, otherwise 0s
+  Eigen::VectorXd m_ite; //individual treatment effect - populated if causal tree, otherwise 0s
   double m_counter;
   double m_treatCounter;
   double m_controlCounter;
   double m_parentCounter;
-  VectorXd m_labelStats;
-  VectorXd m_treatLabelStats;
-  VectorXd m_controlLabelStats;
-  const VectorXd* m_minFeatRange;
-  const VectorXd* m_maxFeatRange;
+  Eigen::VectorXd m_labelStats;
+  Eigen::VectorXd m_treatLabelStats;
+  Eigen::VectorXd m_controlLabelStats;
+  const Eigen::VectorXd* m_minFeatRange;
+  const Eigen::VectorXd* m_maxFeatRange;
   
   OnlineNode* m_leftChildNode;
   OnlineNode* m_rightChildNode;
@@ -185,7 +184,7 @@ public:
   RandomTest* m_bestTest;
 
   int* m_numNodes; //pointer to tree for number of nodes
-  const VectorXd* m_rootLabelStats;
+  const Eigen::VectorXd* m_rootLabelStats;
   const double* m_rootCounter;
     
   bool shouldISplit() const;
@@ -193,40 +192,45 @@ public:
 };
 
 
-class OnlineTree: public Classifier {
+class OnlineTree {
 public:
   //version to create with randomization
   OnlineTree(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	       const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+	       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
 
   //version to create from a matrix of parameters
-  OnlineTree(const MatrixXd& treeParms, const Hyperparameters& hp,
+  OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& hp,
 	     const int& numClasses, double oobe, double counter,
-	     const VectorXd& minFeatRange, const VectorXd& maxFeatRange);
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
 
   ~OnlineTree();
 
   //update the tree with a new data point
-  virtual void update(Sample& sample);
+  void update(Sample& sample);
 
   //evaluate a new data point
-  virtual void eval(Sample& sample, Result& result);
+  void eval(Sample& sample, Result& result);
 
   //export tree parameters
-  virtual vector<MatrixXd> exportParms();  //using a vector as needs to be constant across the classifier class  
+  vector<Eigen::MatrixXd> exportParms();  //using a vector as needs to be constant across the models class  
 
   //get info about the tree
-  virtual double getOOBE();
-  virtual double getCounter();
+  double getOOBE();
+  double getCounter();
 
   //print information about and of the tree
-  virtual void printInfo();
-  virtual void print();
+  void printInfo();
+  void print();
 
-  virtual pair<VectorXd,VectorXd> getFeatRange();
-  virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange);
+  pair<Eigen::VectorXd,Eigen::VectorXd> getFeatRange();
+  void updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
 
-  virtual MatrixXd getFeatureImportance();
+  Eigen::MatrixXd getFeatureImportance();
+
+  const string name() const {
+    return m_name;
+  }
+
 
 private:
   int m_numNodes;
@@ -237,46 +241,56 @@ private:
   const Hyperparameters* m_hp;
   OnlineNode* m_rootNode;
 
-  const VectorXd* m_minFeatRange;
-  const VectorXd* m_maxFeatRange;
+  const Eigen::VectorXd* m_minFeatRange;
+  const Eigen::VectorXd* m_maxFeatRange;
+
+  string m_name;
 
 };
 
 
-class OnlineRF: public Classifier {
+class OnlineRF {
 public:
   //version to construct using randomization
   OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
-	   VectorXd minFeatRange, VectorXd maxFeatRange);
+	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
 
   //version to construct from a set of parameters
-  OnlineRF(const vector<MatrixXd> orfParms, const Hyperparameters& hp,
+  OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters& hp,
 	   const int& numClasses, double oobe, double counter,
-	   VectorXd minFeatRange, VectorXd maxFeatRange);
+	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
 
   ~OnlineRF();
   
   //udpate with a new data point
-  virtual void update(Sample& sample);
+  void update(Sample& sample);
   
   //evaluate a new data point
-  virtual void eval(Sample& sample, Result& result);
+  void eval(Sample& sample, Result& result);
  
   //export forest parameters
-  virtual vector<MatrixXd> exportParms(); 
+  vector<Eigen::MatrixXd> exportParms(); 
 
   //get info about the tree
-  virtual double getOOBE();
-  virtual double getCounter();
+  double getOOBE();
+  double getCounter();
 
   //print information about and of the RF
-  virtual void printInfo();
-  virtual void print();
+  void printInfo();
+  void print();
 
-  virtual pair<VectorXd,VectorXd> getFeatRange();
-  virtual void updateFeatRange(VectorXd minFeatRange, VectorXd maxFeatRange);
+  pair<Eigen::VectorXd,Eigen::VectorXd> getFeatRange();
+  void updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
 
-  virtual MatrixXd getFeatureImportance();
+  Eigen::MatrixXd getFeatureImportance();
+
+  const string name() const {
+    return m_name;
+  }
+
+  //methods for training and testing with large amounts of data
+  void train(DataSet& dataset);
+  vector<Result> test(DataSet& dataset);
 
 protected:
   double m_counter;
@@ -288,8 +302,10 @@ protected:
   const Hyperparameters* m_hp;
 
   //store vectors of min and max feature ranges - to be checked and updated when more data loaded
-  VectorXd m_minFeatRange;
-  VectorXd m_maxFeatRange;
+  Eigen::VectorXd m_minFeatRange;
+  Eigen::VectorXd m_maxFeatRange;
+
+  string m_name;
 };
 
 #endif /* ONLINERF_H_ */

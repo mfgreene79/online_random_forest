@@ -7,10 +7,26 @@
 get_importance(model)
 }
 \arguments{
-\item{model}{An initialized online random forest object created by the `init_orf()` function and ideally trained with data using the `train_orf()` function}
+\item{model}{An online random forest object}
 }
 \description{
 This function gets the feature importances from an Online Random Forest
+}
+\examples{
+  ##simulate a data point with 10 columns x <- matrix(runif(10), nrow=1)
+
+  ## initialize the model object orfmod <- init_orf(numClasses = 2,
+  numFeatures = 10, numRandomTests = 2, counterThreshold = 10, maxDepth = 5,
+  numTrees = 10, numEpochs = 1)
+
+  ## train the model with the data orfmod <- train_orf(model = orfmod, x = x,
+  y=0)
+
+  get_importance(orfmod)
+  
+}
+\seealso{
+\code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
 }
 \keyword{causal}
 \keyword{forest}

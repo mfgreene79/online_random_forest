@@ -36,24 +36,29 @@
 #include <vector>
 #include <set>
 #include <string>
-//#include <eigen3/Eigen/Core>
-//#include <eigen3/Eigen/Dense>
 
 using namespace std;
-using namespace Eigen;
 
 // DATA CLASSES
 class Sample {
 public:
-  VectorXd x; //features
+  Eigen::VectorXd x; //features
   int y; //target
   double w; //weight
   int id; //id
-  bool treat; //treatment identifier
+  int W; //treatment identifier
 };
 
 class DataSet {
  public:
+
+  //constructor for data without treatment assignments
+  DataSet();
+  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y);
+  //constructor for data with treatment assignments
+  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd W);
+  //constructor for data without treatment assignments or outcome (for testing)
+  DataSet(Eigen::MatrixXd x, int numClasses);
   void findFeatRange();
 
   vector<Sample> m_samples;
@@ -61,8 +66,8 @@ class DataSet {
   int m_numFeatures;
   int m_numClasses;
 
-  VectorXd m_minFeatRange;
-  VectorXd m_maxFeatRange;
+  Eigen::VectorXd m_minFeatRange;
+  Eigen::VectorXd m_maxFeatRange;
 };
 
 class Result {
@@ -70,11 +75,11 @@ public:
   Result();
   Result(const int& numClasses);
 
-  VectorXd confidence;
+  Eigen::VectorXd confidence;
   int prediction;
-  VectorXd ite; //individual treatment effect - difference over control - one value per class
+  Eigen::VectorXd ite; //individual treatment effect - difference over control - one value per class
   
-  MatrixXd iteAllTrees; //capture values for all trees - one col per class one row per tree
+  Eigen::MatrixXd iteAllTrees; //capture values for all trees - one col per class one row per tree
 };
 
 #endif /* DATA_H_ */

@@ -26,20 +26,14 @@
 #ifndef HYPERPARAMETERS_H_
 #define HYPERPARAMETERS_H_
 
+#include <RcppEigen.h>
+//[[Rcpp::depends(RcppEigen)]]
+
 #include <string>
 using namespace std;
 
-typedef enum {
-    EXPONENTIAL, LOGIT
-} LOSS_FUNCTION;
-
-typedef enum {
-    WEAK_ORF, WEAK_LARANK
-} WEAK_LEARNER;
-
 class Hyperparameters {
  public:
-  //    Hyperparameters();
 
   // Forest
   int numRandomTests;
@@ -47,23 +41,25 @@ class Hyperparameters {
   int maxDepth;
   int numTrees;
   
-  string method; //splitting criteria.  gini, mse
+  string method; //splitting criteria.  gini, mse etc
   string type; //rf type: classification, regression
 
   bool causal; //causal rf indicator vs not causal
 
-    // Experimenter
-    bool findTrainError;
-    int numEpochs;
+  // Experimenter
+  bool findTrainError;
+  int numEpochs;
 
-    // Data
-    string trainData;
-    string trainLabels;
-    string testData;
-    string testLabels;
+  // Data
+  string trainData;
+  string trainLabels;
+  string testData;
+  string testLabels;
 
-     // Output
-    bool verbose;
+  // Output
+  bool verbose;
+
+  Rcpp::List hpToList();
 
 };
 

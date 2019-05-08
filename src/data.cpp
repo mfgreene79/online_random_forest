@@ -24,34 +24,115 @@
  */
 
 #include "data.h"
+#include "hyperparameters.h"
 
 void DataSet::findFeatRange() {
-    m_minFeatRange = VectorXd(m_numFeatures);
-    m_maxFeatRange = VectorXd(m_numFeatures);
+  m_minFeatRange = Eigen::VectorXd(m_numFeatures);
+  m_maxFeatRange = Eigen::VectorXd(m_numFeatures);
 
-    double minVal, maxVal;
-    for (int nFeat = 0; nFeat < m_numFeatures; nFeat++) {
-        minVal = m_samples[0].x(nFeat);
-        maxVal = m_samples[0].x(nFeat);
-        for (int nSamp = 1; nSamp < m_numSamples; nSamp++) {
-            if (m_samples[nSamp].x(nFeat) < minVal) {
-                minVal = m_samples[nSamp].x(nFeat);
-            }
-            if (m_samples[nSamp].x(nFeat) > maxVal) {
-                maxVal = m_samples[nSamp].x(nFeat);
-            }
-        }
-
-        m_minFeatRange(nFeat) = minVal;
-        m_maxFeatRange(nFeat) = maxVal;
+  double minVal, maxVal;
+  for (int nFeat = 0; nFeat < m_numFeatures; nFeat++) {
+    minVal = m_samples[0].x(nFeat);
+    maxVal = m_samples[0].x(nFeat);
+    for (int nSamp = 1; nSamp < m_numSamples; nSamp++) {
+      if (m_samples[nSamp].x(nFeat) < minVal) {
+	minVal = m_samples[nSamp].x(nFeat);
+      }
+      if (m_samples[nSamp].x(nFeat) > maxVal) {
+	maxVal = m_samples[nSamp].x(nFeat);
+      }
     }
+    
+    m_minFeatRange(nFeat) = minVal;
+    m_maxFeatRange(nFeat) = maxVal;
+  }
 }
 
 Result::Result() {
 }
 
-Result::Result(const int& numClasses) : confidence(VectorXd::Zero(numClasses)),
-					ite(VectorXd::Zero(numClasses))
+Result::Result(const int& numClasses) : confidence(Eigen::VectorXd::Zero(numClasses)),
+					ite(Eigen::VectorXd::Zero(numClasses))
  {
+}
+
+DataSet::DataSet() {
+}
+
+
+/////version to apply when using a non-causal random forest
+/////create a DataSet item from input matrix and y
+DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y) {
+  //creates a DataSet class from matrices x and y
+  //  DataSet ds;
+  m_numFeatures = x.cols();
+  m_numSamples = x.rows();
+
+  set<int> labels;
+  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+    Sample sample;
+    sample.x = Eigen::VectorXd(m_numFeatures);
+    sample.id = nSamp;
+    sample.w = 1.0;
+    sample.y = y(nSamp);
+    labels.insert(sample.y);
+    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+      sample.x(nFeat) = x(nSamp, nFeat);
+    } //loop nFeat
+    m_samples.push_back(sample); // push sample into dataset
+  } //loop nSamp
+  m_numClasses = labels.size();
+
+  this->findFeatRange();
+}
+
+/////version to apply when using a causal random forest - includes treatment indicators
+DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd W) {
+  //creates a DataSet class from matrices x and y
+//   DataSet ds;
+//   ds.m_numFeatures = x.cols();
+//   ds.m_numSamples = x.rows();
+
+  m_numFeatures = x.cols();
+  m_numSamples = x.rows();
+
+  set<int> labels;
+  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+    Sample sample;  
+    sample.x = Eigen::VectorXd(m_numFeatures);
+    sample.id = nSamp;
+    sample.w = 1.0;
+    sample.y = y(nSamp);
+    sample.W = W(nSamp);
+    labels.insert(sample.y);
+    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+      sample.x(nFeat) = x(nSamp, nFeat);
+    } //loop nFeat
+    m_samples.push_back(sample); // push sample into dataset
+  } //loop nSamp
+  m_numClasses = labels.size();
+  
+  this->findFeatRange();
+}
+
+//create dataset for testing purposes
+DataSet::DataSet(Eigen::MatrixXd x, int numClasses) {
+  //creates a DataSet class from matrix x
+  //  DataSet ds;
+  m_numFeatures = x.cols();
+  m_numSamples = x.rows();
+  
+  set<int> labels;  
+  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+    Sample sample;
+    sample.x = Eigen::VectorXd(m_numFeatures);
+    sample.id = nSamp;
+    sample.w = 1.0;
+    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+      sample.x(nFeat) = x(nSamp, nFeat);
+    } //loop nFeat
+    m_samples.push_back(sample); // push sample into dataset
+  } //loop nSamp
+  m_numClasses = numClasses;
 }
 

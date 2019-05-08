@@ -7,29 +7,40 @@
 train_orf(model, x, y, w = NULL, trainModel = TRUE)
 }
 \arguments{
-\item{model}{An initialized online random forest object created by the `init_orf()` function.}
+\item{model}{An online random forest object}
 
-\item{x}{A matrix of features to train the forest.  Must be equal to `numFeatures` when forest was initialized.}
+\item{x}{A matrix of features to train the forest.  Must be equal to
+\code{numFeatures} when forest was initialized.}
 
-\item{y}{Vector of classes.  Multiclass classification is supported.  Must be integers.}
+\item{y}{Vector of classes.  Multiclass classification is supported.
+Must be integers.}
 
-\item{w}{Vector of treatment assignments.  Must be 0 or 1.  Defaults to NULL.  Must be provided if the model object was initialized with `causal=TRUE`}
+\item{w}{Vector of treatment assignments.  Must be 0 or 1.
+with \code{causal=TRUE}}
 
-\item{trainModel}{Should the forest be trained on the new data?  Defaults to TRUE.  Useful for testing.}
+\item{trainModel}{Should the forest be trained on the new data?
+Defaults to TRUE.  Useful for testing.}
 }
 \description{
-This function trains an initialized online random forest (or causal online random forest).  The output is a list representing an ORF.  For more information see the `init_orf()` function.
+This function trains an initialized online random forest (or causal online
+ random forest).  The output is an online random forest object.  For more
+ information see the `init_orf()` function.
 }
 \examples{
 ## simulate a data point with 10 columns
 x <- matrix(runif(10), nrow=1)
 
 ## initialize the model object
-orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2, counterThreshold = 10, maxDepth = 5, numTrees = 10, numEpochs = 1)
+orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2,
+                   counterThreshold = 10, maxDepth = 5, numTrees = 10,
+                   numEpochs = 1)
 
 ## train the model with the data
 orfmod <- train_orf(model = orfmod, x = x, y=0)
 
+}
+\seealso{
+\code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
 }
 \keyword{causal}
 \keyword{forest}

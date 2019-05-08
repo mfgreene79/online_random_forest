@@ -123,22 +123,13 @@ inline void randPerm(const int& inNum, const int& inPart, vector<int>& outVect) 
     outVect.erase(outVect.begin() + inPart, outVect.end());
 }
 
-// MatrixXd append_col(MatrixXd m, VectorXd v) {
-//   if(m.rows() == v.size()) {
-//     MatrixXd m_temp(m.rows(), m.cols() + 1);
-//     for(int j=0;j < m.cols(); ++j) {
-//       m_temp.col(j) = m.col(j);
-//     }
-//     m_temp.col(m.cols()) = v;
-//     return(m_temp);
-//   } else {
-//     cout << "Matrix and Vector not the same size. m: " << m.rows() << " rows " << "and v: " << v.size() << std::endl; 
-//     MatrixXd ret(1,1);
-//     //ret.Zero();
-//     return(ret);
-//   }
-// }
-
+inline int roundup(double x) {
+  int ret = static_cast<int>(x);
+  if(x - static_cast<double>(ret) != 0)
+    ++ret;
+  
+  return(ret);
+}
 
 
 #endif /* UTILITIES_H_ */
