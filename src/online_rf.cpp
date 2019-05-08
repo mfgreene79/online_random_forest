@@ -1528,6 +1528,5 @@ vector<Result> OnlineRF::test(DataSet& dataset) {
 	this->eval(dataset.m_samples[nSamp], result);
         results.push_back(result);
     }
-    //    double error = compError(results, dataset);
     return results;
 }

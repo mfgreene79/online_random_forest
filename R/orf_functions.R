@@ -19,8 +19,6 @@
 
 ##########################################################################
 
-
-
 #' Initialize Online Random Forest
 #'
 #' This function initializes the online random forest (or causal online random
@@ -77,13 +75,13 @@
 #'                    numEpochs = 1)
 #'
 #' ## train the model with the data
-#' orfmod <- train_orf(model = orfmod, x = x, y=0)
+#' orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 #' 
 
 
 init_orf <- function(numClasses, numFeatures, numRandomTests, counterThreshold, maxDepth,
                      numTrees, numEpochs, 
-                     type = 'classification', method = 'gini', causal=FALSE, numTreatClasses=2,
+                     type = 'classification', method = 'gini', causal=FALSE,
                      minFeatRange = NULL, maxFeatRange = NULL, labels=c(1:numClasses),
                      findTrainError=FALSE) {
   
@@ -294,7 +292,7 @@ is.orf <- function(x) {inherits(x, "orf")}
 #'
 #' This function trains an initialized online random forest (or causal online
 #'  random forest).  The output is an online random forest object.  For more
-#'  information see the `init_orf()` function.
+#'  information see the \code{\link{init_orf}} function.
 #' @param model An online random forest object
 #' @param x A matrix of features to train the forest.  Must be equal to
 #'  \code{numFeatures} when forest was initialized.
@@ -305,7 +303,7 @@ is.orf <- function(x) {inherits(x, "orf")}
 #'  with \code{causal=TRUE}
 #' @param trainModel Should the forest be trained on the new data?
 #'  Defaults to TRUE.  Useful for testing.
-#' @seealso \code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
+#' @seealso \code{\link{init_orf}} for initializing the orf object
 #' @export an online random forest of class \code{orf}, see \code{\link{init_orf}} for more information.
 #' @examples
 #' ## simulate a data point with 10 columns
@@ -317,7 +315,7 @@ is.orf <- function(x) {inherits(x, "orf")}
 #'                    numEpochs = 1)
 #'
 #' ## train the model with the data
-#' orfmod <- train_orf(model = orfmod, x = x, y=0)
+#' orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 #' 
 #' @keywords causal random forest, online learning, incremental learning,
 #'  out-of-core learning, online random forest
@@ -349,7 +347,6 @@ train_orf <- function(model, x, y, w=NULL, trainModel=TRUE) {
     }
   } 
   
-  
   if(model$hyperparameters$causal==FALSE) {
     newmodel = orf(x, y, model, trainModel=trainModel)
   } else {
@@ -366,37 +363,40 @@ train_orf <- function(model, x, y, w=NULL, trainModel=TRUE) {
 #'
 #' This function trains an initialized online random forest (or causal online
 #' random forest).
-#' @param model An online random forest object
+#' @param object An online random forest object
 #' @param x A matrix of features on which to generate predictions.  Must be
 #'   equal to `numFeatures` when forest was initialized.
 #' @param iteAll If a causal forest, should all ITE estimates be returned?
 #'   Default=FALSE.
+#' @param ... additional arguments affecting the predictions produced.
 #' @keywords causal random forest, online learning, incremental learning,
 #'   out-of-core learning, online random forest
 #' @export prediction A vector of class predictions
 #' @export confidence A matrix of probabilities with a column for each class
 #' @export ite If a causal forest, the individual treatment effects
 #' @export ite_all If a causal forest, a list with one element for each class, each a matrix with the individual treatment effects for every tree in the forest.
-#' @seealso \code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
 #' @examples
-#' ## simulate a data point with 10 columns x <- matrix(runif(10), nrow=1)
+#' ## simulate a data point with 10 columns 
+#' x <- matrix(runif(10), nrow=1)
 #'
-#' ## initialize the model object orfmod <- init_orf(numClasses = 2, numFeatures
-#' = 10, numRandomTests = 2, counterThreshold = 10, maxDepth = 5, numTrees = 10,
-#' numEpochs = 1)
+#' ## initialize the orf object
+#' orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2, 
+#' counterThreshold = 10, maxDepth = 5, numTrees = 10, numEpochs = 1)
 #'
-#' ## train the model with the data orfmod <- train_orf(model = orfmod, x = x,
-#' y=0)
+#' ## train the model with the data 
+#' orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 #'
-#' ## make predictions on new data x2 <- matrix(runif(10), nrow=1) p <-
-#' predict(orfmod, x)
+#' ## make predictions on new data 
+#' x2 <- matrix(runif(10), nrow=1) 
+#' p <- predict(orfmod, x)
 #' 
 
-predict.orf <- function(model, x, iteAll=FALSE) {
-  if(!is.orf(model)) {
+predict.orf <- function(object, x, iteAll=FALSE, ...) {
+  if(!is.orf(object)) {
     stop('model is not an object of class "orf"')
   }
-  return(predictOrf(as.matrix(x), model, iteAll))
+  return(predictOrf(as.matrix(x), object, iteAll))
 }
 
 #' Get Feature Importances
@@ -405,18 +405,20 @@ predict.orf <- function(model, x, iteAll=FALSE) {
 #' @param model An online random forest object
 #' @keywords causal random forest, online learning, incremental learning, out-of-core learning, online random forest
 #' @export importances A vector of variable importances averaged across the trees in the random forest.  Standardized to sum to 1. #' 
-#' @seealso \code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object, and \code{\link{predict.orf}} for making predictions from the orf object
 #' @examples 
-#'   ##simulate a data point with 10 columns x <- matrix(runif(10), nrow=1)
+#' ##simulate a data point with 10 columns 
+#' x <- matrix(runif(10), nrow=1)
 #'
-#'   ## initialize the model object orfmod <- init_orf(numClasses = 2,
-#'   numFeatures = 10, numRandomTests = 2, counterThreshold = 10, maxDepth = 5,
-#'   numTrees = 10, numEpochs = 1)
+#' ## initialize the model object 
+#' orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2, 
+#' counterThreshold = 10, maxDepth = 5,
+#' numTrees = 10, numEpochs = 1)
 #'
-#'   ## train the model with the data orfmod <- train_orf(model = orfmod, x = x,
-#'   y=0)
+#' ## train the model with the data 
+#' orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 #'
-#'   get_importance(orfmod)
+#' get_importance(orfmod)
 #'   
 
 get_importance <- function(model) {
@@ -438,27 +440,274 @@ get_importance <- function(model) {
 #' @param reference The value of w that should be taken to represent the control condition.  Defaults to 0.
 #' @export ate A list of average treatment effects for each level over the reference.  Will have one entry for each unique value in w.  
 #' @examples
+#' \dontrun{
 #' ## simulate treatment assignments and outcome
 #' n <- 100
 #' w <- ifelse(runif(n) > .5, 1, 0)
 #' y <- ifelse(runif(n) + .25 * w > .5, 1, 0)
 #' 
 #' get_ate(y, w)
+#' }
 #'
 #' 
 
 get_ate <- function(y, w, reference=0) {
   #calculate Average Treatment Effect for all levels of treatment against reference
-  require(dplyr)
-  require(tidyr)
-  dat <- cbind(y, w) %>% as.data.frame(.) %>% mutate(w_txt=paste0("w",w)) %>%
-    group_by(w_txt) %>% summarise(y=mean(y)) %>% spread(key=w_txt, value=y)
-  ate <- list()
-  for(v in colnames(dat)) {
-    if(v != paste0("w",reference)) {
-      ate[v] = dat[,v] - dat[,paste0("w",reference)]
+  if (requireNamespace("dplyr", quietly = TRUE)) {
+    dat <- cbind(y, w) %>% as.data.frame(.) %>% mutate(w_txt=paste0("w",w)) %>%
+      group_by(w_txt) %>% summarise(y=mean(y)) %>% spread(key=w_txt, value=y)
+    ate <- list()
+    for(v in colnames(dat)) {
+      if(v != paste0("w",reference)) {
+        ate[v] = dat[,v] - dat[,paste0("w",reference)]
+      }
     }
+    return(ate)
+  } else {
+    stop("package dplyr is required")
   }
-  return(ate)
 }
+
+
+#' Online Random Forest
+#'
+#' This function initializes and fits an online random forest from a matrix of
+#' features and a vector of outcomes.
+#' @param x A matrix of features to train the forest.
+#' @param y matrix of classes with one column.  Multiclass classification is supported.
+#'  Must be integers and provided as a matrix.
+#' @param numRandomTests Number of random tests, i.e., number of features to
+#'  be selected at each node for evaluation.
+#' @param counterThreshold Threshold for number of observations before a split
+#'  will occur.
+#' @param maxDepth Maximum depth for each tree.
+#' @param numTrees Number of trees in the forest.
+#' @param numEpochs Number of epochs for processing during each training step.
+#' @param type Type of Random Forest.  Only `classification` is implemented
+#' at this time.
+#' @param method Method used for determining if a node should split. See details for more information.
+#' @param findTrainError Should the forest calculate the out of back error on the
+#'  training data.
+#' @param verbose verbose output (warning: may call cout from C++)
+#' @param trainModel Should the forest be trained on the new data?
+#'  Defaults to TRUE.  Useful for testing.
+#' @keywords online random forest, online learning, incremental learning,
+#"  out-of-core learning
+#' @export oobe Out of bag error count
+#' @export n Count of observations that have passed through the algorithm
+#' @export numClasses Number of classes passed from input
+#' @export featRange List with two elements, each a vector of length numFeatures representing the minimum and maximum observed from the features.
+#' @export forest A list comprising the forest parameters.  Each element is a matrix representing a single tree in the forest.  Each row in the matrix represents a node in the tree.
+#' @export hyperparameters A list with the hyperparameters passed to the model.
+#' @export labels Labels passed from the input.
+#' @details This function provides an alternative method for using the
+#'   algorithm, as opposed to using \code{\link{init_orf}} and
+#'   \code{\link{train_orf}}.  Note that unlike the init/train method this call
+#'   to the algorithm will automatically identify the number of features,
+#'   classes, and labels in the provided data.
+#'   
+#'   Implemented methods are \code{method="gini"} for Gini Impurity
+#'   (\code{p*(1-p)}), \code{method="entropy"} for entropy (\code{p*log_2(p)}),
+#'   or \code{method="hellinger"} for the Hellinger distance between the rate
+#'   at the node and the overall population (\code{sqrt(p) - sqrt(q)}).
+#'   Defaults to \code{gini}.
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object
+#' @examples
+#' ## simulate a data point with 10 columns
+#' x <- matrix(runif(10), nrow=1)
+#' y <- matrix(0)
+#'
+#' ## fit the model 
+#' orfmod <- online_random_forest(x=x, y=y, 
+#'                                numRandomTests = 2,
+#'                                counterThreshold = 10, 
+#'                                maxDepth = 5, 
+#'                                numTrees = 10,
+#'                                numEpochs = 1)
+#'
+ 
+
+online_random_forest <- function(x, y, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type = "classification", method = "gini", findTrainError = FALSE, verbose = FALSE, trainModel = TRUE) {
+  .Call('_corf_online_random_forest', PACKAGE = 'corf', x, y, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type, method, findTrainError, verbose, trainModel)
+}
+
+#' Causal Online Random Forest 
+#'
+#' This function initializes and fits a causal online random forest from a matrix of
+#' features and a vector of outcomes.
+#' @param x A matrix of features on which to generate predictions.  
+#' @param y Vector of classes.  Multiclass classification is supported.  Must be integers.
+#' @param treat Vector of treatment assignment.  Must be values of 0 or 1. Multiple treatments are not supported at this time.
+#' @param numRandomTests Number of random tests, i.e., number of features to be selected at each node for evaluation.
+#' @param counterThreshold Threshold for number of observations before a split will occur.
+#' @param maxDepth Maximum depth for each tree.
+#' @param numTrees Number of trees in the forest.
+#' @param numEpochs Number of epochs for processing during each training step.
+#' @param type Type of Random Forest.  Only `classification` is implemented at this time.
+#' @param method Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.
+#' @param causal Should the forest be fit in a causal way?  Default=TRUE. Note: not meaningful when set to FALSE.  Included for code compatibility.
+#' @param findTrainError Should the algorithm find the out of bag error on the training set?  Default=TRUE.
+#' @param verbose verbose output (warning: may call cout from C++)
+#' @param trainModel Should the forest be trained on the new data?
+#'  Defaults to TRUE.  Useful for testing.
+#' @export oobe Out of bag error count
+#' @export n Count of observations that have passed through the algorithm
+#' @export numClasses Number of classes passed from input
+#' @export featRange List with two elements, each a vector of length numFeatures representing the minimum and maximum observed from the features.
+#' @export forest A list comprising the forest parameters.  Each element is a matrix representing a single tree in the forest.  Each row in the matrix represents a node in the tree.
+#' @export hyperparameters A list with the hyperparameters passed to the model.
+#' @export labels Labels passed from the input.
+#' @details This function provides an alternative method for using the
+#'   algorithm, as opposed to using \code{\link{init_orf}} and
+#'   \code{\link{train_orf}}.  Note that unlike the init/train method this call
+#'   to the algorithm will automatically identify the number of features,
+#'   classes, and labels in the provided data.
+#'   
+#'   Implemented methods are \code{method="gini"} for Gini Impurity
+#'   (\code{p*(1-p)}), \code{method="entropy"} for entropy (\code{p*log_2(p)}),
+#'   or \code{method="hellinger"} for the Hellinger distance between the rate
+#'   at the node and the overall population (\code{sqrt(p) - sqrt(q)}).
+#'   Defaults to \code{gini}.
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object
+#' @examples
+#' ## simulate a data point with 10 columns
+#' x <- matrix(runif(10), nrow=1)
+#' y <- matrix(0)
+#' w <- matrix(1)
+#'
+#' ## fit the model object
+#' orfmod <-  causal_online_random_forest(x=x, y=y, treat=w,
+#'                                        numRandomTests = 2,
+#'                                        counterThreshold = 10, 
+#'                                        maxDepth = 5, 
+#'                                        numTrees = 10,
+#'                                        numEpochs = 1)
+#'
+#' 
+
+causal_online_random_forest <- function(x, y, treat, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type = "classification", method = "gini", causal = TRUE, findTrainError = FALSE, verbose = FALSE, trainModel = TRUE) {
+  .Call('_corf_causal_online_random_forest', PACKAGE = 'corf', x, y, treat, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type, method, causal, findTrainError, verbose, trainModel)
+}
+
+#' Online Random Forest 
+#'
+#' Workhorse function used to fit an online random forest object.  Use the functions
+#' \code{\link{init_orf}} and \code{\link{train_orf}} or \code{\link{online_random_forest}} 
+#' instead.
+#' @param x A matrix of features on which to generate predictions.  
+#' @param y Vector of classes.  Multiclass classification is supported.  Must be integers.
+#' @param orfModel List representing an orf model.
+#' @param trainModel Should the forest be trained on the new data?
+#'  Defaults to TRUE.  Useful for testing.
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object
+
+orf <- function(x, y, orfModel, trainModel = TRUE) {
+  .Call('_corf_orf', PACKAGE = 'corf', x, y, orfModel, trainModel)
+}
+
+#' Causal Online Random Forest 
+#'
+#' Workhorse function used to fit a causal online random forest object.  Use the functions
+#' \code{\link{init_orf}} and \code{\link{train_orf}} or \code{\link{causal_online_random_forest}} 
+#' instead.
+#' @param x A matrix of features on which to generate predictions.  
+#' @param y Matrix of classes.  Multiclass classification is supported.  Must be integers and a matrix.
+#' @param treat Matrix of treatment assignments. Must be values 0 or 1 and a matrix.
+#' @param orfModel List representing an orf model.
+#' @param trainModel Should the forest be trained on the new data?
+#'  Defaults to TRUE.  Useful for testing.
+#' @seealso \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object
+
+corf <- function(x, y, treat, orfModel, trainModel = TRUE) {
+  .Call('_corf_corf', PACKAGE = 'corf', x, y, treat, orfModel, trainModel)
+}
+
+#' Predictions from Online Random Forests 
+#'
+#' Workhorse function used to make predictions from online random forest objects.  Use the function
+#' \code{\link{predict.orf}} instead.
+#' @param x A matrix of features on which to generate predictions.  
+#' @param orfModel List representing an orf model.
+#' @param iteAll If a causal forest, should all ITE estimates be returned? Default=FALSE.
+#' @seealso \code{\link{predict.orf}} for making predictions from the orf object.
+
+predictOrf <- function(x, orfModel, iteAll = FALSE) {
+  .Call('_corf_predictOrf', PACKAGE = 'corf', x, orfModel, iteAll)
+}
+
+#' Causal Online Random Forest Cross Validation
+#'
+#' This function runs cross validation with a Causal ORF over a dataset to
+#' return out of sample predictions and accuracy.
+#' hyperparameters.
+#' @param x A matrix of features on which to generate predictions.  Must be equal to `numFeatures` when forest was initialized.
+#' @param y Matrix of classes with one column.  Multiclass classification is supported.  Must be integers and a matrix.
+#' @param treat Matrix of treatment assignments.  Must be values of 0 or 1 in a matrix with one column.
+#' @param numClasses Number of classes expected to be classified.
+#' @param numRandomTests Number of random tests, i.e., number of features to be selected at each node for evaluation.
+#' @param counterThreshold Threshold for number of observations before a split will occur.
+#' @param maxDepth Maximum depth for each tree.
+#' @param numTrees Number of trees in the forest.
+#' @param numEpochs Number of epochs for processing during each training step.
+#' @param nfolds Number of folds for cross validation.
+#' @param type Type of Random Forest.  Only `classification` is implemented at this time.
+#' @param method Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.
+#' @export probs Class probabilities from hold out predictions in cross validation.
+#' @export classes Class predictions from hold out predictions in cross validation.
+#' @export actuals Actual values of the outcome.
+#' @export accurate Indicators of whether the predicted class is equal to the outcome.
+#' @export treat Treatment indicator
+#' @export ite Estimated Individual treatment effect 
+#' @details Warning: the cross validation procedure permutes the order of the observations in the output.
+#' @examples 
+#' \dontrun{
+#' x <- rnorm()
+#' }
+
+causal_orf_cv <- function(x, y, treat, numClasses, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, nfolds, type = "classification", method = "gini") {
+  .Call('_corf_causal_orf_cv', PACKAGE = 'corf', x, y, treat, numClasses, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, nfolds, type, method)
+}
+
+#' Online Random Forest Cross Validation
+#'
+#' This function runs cross validation with a Causal ORF over a dataset to
+#' return out of sample predictions and accuracy.
+#' hyperparameters.
+#' @param x A matrix of features on which to generate predictions.  Must be equal to `numFeatures` when forest was initialized.
+#' @param y Matrix of classes with one column.  Multiclass classification is supported.  Must be integers and a matrix.
+#' @param numClasses Number of classes expected to be classified.
+#' @param numRandomTests Number of random tests, i.e., number of features to be selected at each node for evaluation.
+#' @param counterThreshold Threshold for number of observations before a split will occur.
+#' @param maxDepth Maximum depth for each tree.
+#' @param numTrees Number of trees in the forest.
+#' @param numEpochs Number of epochs for processing during each training step.
+#' @param nfolds Number of folds for cross validation.
+#' @param type Type of Random Forest.  Only `classification` is implemented at this time.
+#' @param method Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.
+#' @export probs Class probabilities from hold out predictions in cross validation.
+#' @export classes Class predictions from hold out predictions in cross validation.
+#' @export actuals Actual values of the outcome.
+#' @export accurate Indicators of whether the predicted class is equal to the outcome.
+#' @details Warning: the cross validation procedure permutes the order of the observations in the output.
+#' @examples 
+#' \dontrun{
+#' x <- rnorm()
+#' }
+
+orf_cv <- function(x, y, numClasses, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, nfolds, type = "classification", method = "gini") {
+  .Call('_corf_orf_cv', PACKAGE = 'corf', x, y, numClasses, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, nfolds, type, method)
+}
+
+
+#' Variable importances from orf objects.
+#'
+#' Workhorse function used to get variable importances from online random forest objects.  Use the function
+#' \code{\link{get_importance}} instead.
+#' @param orfModel List representing an orf model.
+#' @seealso \code{\link{get_importance}} for making predictions from the orf object.
+
+getImps_ <- function(orfModel) {
+  .Call('_corf_getImps_', PACKAGE = 'corf', orfModel)
+}
+
 

@@ -24,7 +24,7 @@ Defaults to TRUE.  Useful for testing.}
 \description{
 This function trains an initialized online random forest (or causal online
  random forest).  The output is an online random forest object.  For more
- information see the `init_orf()` function.
+ information see the \code{\link{init_orf}} function.
 }
 \examples{
 ## simulate a data point with 10 columns
@@ -36,11 +36,11 @@ orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2,
                    numEpochs = 1)
 
 ## train the model with the data
-orfmod <- train_orf(model = orfmod, x = x, y=0)
+orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 
 }
 \seealso{
-\code{\link{train_orf}} for training the orf object, \code{\link{predict.orf}} for making predictions from the orf object, and \code{\link{get_importance}} for getting variable importances from the orf object
+\code{\link{init_orf}} for initializing the orf object
 }
 \keyword{causal}
 \keyword{forest}

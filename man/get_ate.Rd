@@ -19,12 +19,14 @@ reference (i.e., control) condition from a vector of treatment
 assignments and an outcome.
 }
 \examples{
+\dontrun{
 ## simulate treatment assignments and outcome
 n <- 100
 w <- ifelse(runif(n) > .5, 1, 0)
 y <- ifelse(runif(n) + .25 * w > .5, 1, 0)
 
 get_ate(y, w)
+}
 
 
 }

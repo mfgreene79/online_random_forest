@@ -38,5 +38,5 @@ orfmod <- init_orf(numClasses = 2, numFeatures = 10, numRandomTests = 2,
                    numEpochs = 1)
 
 ## train the model with the data
-orfmod <- train_orf(model = orfmod, x = x, y=0)
+orfmod <- train_orf(model = orfmod, x = x, y=as.matrix(0))
 }
