@@ -4,15 +4,13 @@
 \alias{init_orf}
 \title{Initialize Online Random Forest}
 \usage{
-init_orf(numClasses, numFeatures, numRandomTests, counterThreshold,
-  maxDepth, numTrees, numEpochs, type = "classification",
-  method = "gini", causal = FALSE, minFeatRange = NULL,
-  maxFeatRange = NULL, labels = c(1:numClasses),
+init_orf(numFeatures, numRandomTests, counterThreshold, maxDepth, numTrees,
+  numEpochs, numTreatments = 0, numClasses = 0,
+  type = "classification", method = "gini", causal = FALSE,
+  minFeatRange = NULL, maxFeatRange = NULL, labels = NULL,
   findTrainError = FALSE)
 }
 \arguments{
-\item{numClasses}{Number of classes expected to be classified.}
-
 \item{numFeatures}{Number of features that will be in the learning dataset.}
 
 \item{numRandomTests}{Number of random tests, i.e., number of features to
@@ -26,6 +24,10 @@ will occur.}
 \item{numTrees}{Number of trees in the forest.}
 
 \item{numEpochs}{Number of epochs for processing during each training step.}
+
+\item{numTreatments}{Number of treatment groups (required > 0 if causal==TRUE). Defaults to 0.}
+
+\item{numClasses}{Number of classes expected to be classified (required > 0 if type=="classification"). Defaults to 0.}
 
 \item{type}{Type of Random Forest.  Only `classification` is implemented
 at this time.}

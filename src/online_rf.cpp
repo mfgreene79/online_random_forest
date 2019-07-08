@@ -13,6 +13,7 @@
  *
  * Modified 2019 Michael Greene, mfgreene79@yahoo.com
  *  added functionality and enabled ability to connect to R
+ *  added causal forest functionality, regression forest functionality
  *
  *   This program is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,19 +33,20 @@
  *
  ******************************************************************************************/
 
+////// Classification Tree Versions
 //version to construct with randomization
 RandomTest::RandomTest(const Hyperparameters& hp,
 		       const int& numClasses, const int& numFeatures, 
 		       const Eigen::VectorXd &minFeatRange, const Eigen::VectorXd &maxFeatRange,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
-  m_numClasses(&numClasses), m_hp(&hp),
+  m_hp(&hp), m_numClasses(&numClasses), 
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter),
   m_trueCount(0), m_falseCount(0),
   m_trueStats(Eigen::VectorXd::Zero(numClasses)), m_falseStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatTrueCount(0), m_treatFalseCount(0),
   m_treatTrueStats(Eigen::VectorXd::Zero(numClasses)), m_treatFalseStats(Eigen::VectorXd::Zero(numClasses)),
   m_controlTrueCount(0), m_controlFalseCount(0),
-  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses)),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
+  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses))
  {
   m_feature = floor(randDouble(0, numFeatures));
   m_threshold = randDouble(minFeatRange(m_feature), maxFeatRange(m_feature));
@@ -55,14 +57,20 @@ RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses,
 		       int feature, double threshold,
 		       Eigen::VectorXd trueStats, Eigen::VectorXd falseStats,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
-  m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
-  m_trueCount(0.0), m_falseCount(0.0),
-  m_trueStats(trueStats), m_falseStats(falseStats),
-  m_treatTrueCount(0.0), m_treatFalseCount(0.0),
-  m_treatTrueStats(Eigen::VectorXd::Zero(numClasses)), m_treatFalseStats(Eigen::VectorXd::Zero(numClasses)),
-  m_controlTrueCount(0.0), m_controlFalseCount(0.0),
-  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses)),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
+  m_hp(&hp), m_numClasses(&numClasses), 
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter),
+  m_feature(feature), m_threshold(threshold), 
+  m_trueCount(0.0),
+  m_falseCount(0.0),
+  m_trueStats(trueStats), 
+  m_falseStats(falseStats),
+  m_treatTrueCount(0.0), 
+  m_treatFalseCount(0.0),
+  m_treatTrueStats(Eigen::VectorXd::Zero(numClasses)), 
+  m_treatFalseStats(Eigen::VectorXd::Zero(numClasses)),
+  m_controlTrueCount(0.0), 
+  m_controlFalseCount(0.0),
+  m_controlTrueStats(Eigen::VectorXd::Zero(numClasses)), m_controlFalseStats(Eigen::VectorXd::Zero(numClasses))
 {
   m_trueCount = m_trueStats.sum();
   m_falseCount = m_falseStats.sum();
@@ -74,13 +82,17 @@ RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses,
 		       Eigen::VectorXd treatTrueStats, Eigen::VectorXd treatFalseStats,
 		       Eigen::VectorXd controlTrueStats, Eigen::VectorXd controlFalseStats,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
-  m_feature(feature), m_threshold(threshold), m_numClasses(&numClasses), m_hp(&hp),
+  m_hp(&hp), m_numClasses(&numClasses), 
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter),
+  m_feature(feature), m_threshold(threshold), 
+  m_trueCount(0), m_falseCount(0), 
+  m_trueStats(Eigen::VectorXd::Zero(numClasses)),
+  m_falseStats(Eigen::VectorXd::Zero(numClasses)),
+  m_treatTrueCount(0), 
+  m_treatFalseCount(0),
   m_treatTrueStats(treatTrueStats), m_treatFalseStats(treatFalseStats),
-  m_controlTrueStats(controlTrueStats), m_controlFalseStats(controlFalseStats),
-  m_trueStats(Eigen::VectorXd::Zero(numClasses)), m_falseStats(Eigen::VectorXd::Zero(numClasses)),
-  m_trueCount(0), m_falseCount(0), m_treatTrueCount(0), m_treatFalseCount(0),
   m_controlTrueCount(0), m_controlFalseCount(0),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
+  m_controlTrueStats(controlTrueStats), m_controlFalseStats(controlFalseStats)
 {
 
   for(int i=0; i < numClasses; ++i) {
@@ -100,6 +112,81 @@ RandomTest::RandomTest(const Hyperparameters& hp, const int& numClasses,
   }
 }
 
+////// Regression Tree Versions
+//version to construct with randomization
+RandomTest::RandomTest(const Hyperparameters& hp,
+		       const int& numFeatures, 
+		       const Eigen::VectorXd &minFeatRange, 
+		       const Eigen::VectorXd &maxFeatRange,
+		       const Eigen::VectorXd &rootYStats, 
+		       const double &rootCounter) :
+  m_hp(&hp),
+  m_rootYStats(&rootYStats), m_rootCounter(&rootCounter),
+  m_trueCount(0), m_falseCount(0),
+  m_trueYMean(0.0), m_falseYMean(0.0),
+  m_trueYVar(0.0), m_falseYVar(0.0),
+  m_trueErr(0.0), m_falseErr(0.0),
+  m_trueWCounts(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_falseWCounts(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_trueYStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_falseYStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_trueYVarStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_falseYVarStats(Eigen::VectorXd::Zero(hp.numTreatments))
+{
+  m_feature = floor(randDouble(0, numFeatures));
+  m_threshold = randDouble(minFeatRange(m_feature), maxFeatRange(m_feature));
+}
+
+//version to construct from known parameters - not causal
+RandomTest::RandomTest(const Hyperparameters& hp, 
+		       int feature, double threshold,
+		       double trueYMean, double falseYMean,
+		       double trueYVar, double falseYVar,
+		       int trueCount, int falseCount,
+		       double trueErr, double falseErr,
+		       const Eigen::VectorXd &rootYStats, 
+		       const double &rootCounter) :
+  m_hp(&hp),
+  m_rootYStats(&rootYStats), m_rootCounter(&rootCounter),
+  m_feature(feature), m_threshold(threshold), 
+  m_trueCount(trueCount), m_falseCount(falseCount),
+  m_trueYMean(trueYMean), m_falseYMean(falseYMean),
+  m_trueYVar(trueYVar), m_falseYVar(falseYVar),
+  m_trueErr(trueErr), m_falseErr(falseErr)
+{
+}
+
+
+//version to construct from known parameters - causal
+RandomTest::RandomTest(const Hyperparameters& hp, 
+		       int feature, double threshold,
+		       double trueYMean, double falseYMean,
+		       double trueYVar, double falseYVar,
+		       int trueCount, int falseCount,
+		       double trueErr, double falseErr,
+		       Eigen::VectorXd trueWCounts, Eigen::VectorXd falseWCounts,
+		       Eigen::VectorXd trueYStats, Eigen::VectorXd falseYStats,
+		       Eigen::VectorXd trueYVarStats, Eigen::VectorXd falseYVarStats,
+		       const Eigen::VectorXd &rootYStats, 
+		       const double &rootCounter
+		       ) :
+  m_hp(&hp),
+  m_rootYStats(&rootYStats), m_rootCounter(&rootCounter),
+  m_feature(feature), m_threshold(threshold), 
+  m_trueCount(trueCount), m_falseCount(falseCount),
+  m_trueYMean(trueYMean), m_falseYMean(falseYMean),
+  m_trueYVar(trueYVar), m_falseYVar(falseYVar),
+  m_trueErr(trueErr), m_falseErr(falseErr),
+  m_trueWCounts(trueWCounts),
+  m_falseWCounts(falseWCounts),
+  m_trueYStats(trueYStats),
+  m_falseYStats(falseYStats),
+  m_trueYVarStats(trueYVarStats),
+  m_falseYVarStats(falseYVarStats)
+{
+}
+
+
 void RandomTest::update(const Sample& sample) {
     updateStats(sample, eval(sample));
 }
@@ -107,20 +194,27 @@ void RandomTest::update(const Sample& sample) {
 bool RandomTest::eval(const Sample& sample) const {
     return (sample.x(m_feature) > m_threshold) ? true : false;
 }
-
-
-    
+ 
 double RandomTest::score() const {
-  double theta; //value to minimize
+  double out;
+  if(m_hp->type == "classification") {
+    out = this->scoreClassification();
+  } else {
+    out = this->scoreRegression();
+  }
+  return(out);
+}
+
+//Classification Tree Version   
+double RandomTest::scoreClassification() const {
+  double theta=0.0; //value to minimize
 
   if(m_hp->causal == true) {
     //score the treatment and control counts
     //causal version - 
     // squared difference between ratios of treatment and control 
     // summed over classes
-    // weighted average for left and right sides
-    
-    double theta=0.0;
+    // weighted average for left and right sides    
     double trueScore = 0.0, falseScore = 0.0, treatP=0.0, controlP=0.0; 
     //total sum of square difference on the left side
     if (m_treatTrueCount > 0 & m_controlTrueCount > 0) {
@@ -204,8 +298,95 @@ double RandomTest::score() const {
   } //if not causal
   return(theta);
 }
-    
-pair<Eigen::VectorXd, Eigen::VectorXd > RandomTest::getStats(std::string type) const {
+
+/////Regression Tree Version
+double RandomTest::scoreRegression() const {
+  double theta=0.0; //value to minimize
+
+  if(m_hp->causal == true) {
+    //score the treatment and control statistics
+    // weighted avg over treatments
+    // weighted average for left and right sides
+    //methods - 
+    // mse: squared difference between ratios of each treatment versus control 
+    // hellinger: difference between all treatment versions and overall 
+
+    if(m_hp->type=="mse") {
+      double trueMSE=0.0, falseMSE=0.0, trueTauHat2=0.0, falseTauHat2=0.0;
+      //total sum of square difference on the left side and right side
+      for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+	//tauHat2 = (y(treat) - y(0))^2: squared error of treatment - control summed over all treatments
+	trueTauHat2 += pow(m_trueYStats(nTreat) - m_trueYStats(0),2);
+	falseTauHat2 += pow(m_falseYStats(nTreat) - m_falseYStats(0),2);
+	
+	//MSE is the weighted average of tauHats^2
+	trueMSE += trueTauHat2 * m_trueWCounts(nTreat); 
+	falseMSE += falseTauHat2 * m_falseWCounts(nTreat); 
+      }
+      //divide out weights to complete weighted average calculation
+      if(m_trueWCounts.sum() > 0) {
+	trueMSE /= static_cast<double>(m_trueWCounts.sum());
+      }
+      if(m_falseWCounts.sum() > 0) {
+	falseMSE /= static_cast<double>(m_falseWCounts.sum());
+      }
+      
+      theta = (m_trueWCounts.sum() * trueMSE + m_falseWCounts.sum() * falseMSE) / (m_trueWCounts.sum() + m_falseWCounts.sum() + 1e-16);
+      
+      //searching for minimum.  but goal is to maximize sum of squares between treatment and control
+      //so looking to minimize  -SS
+      theta = -theta;
+    } else if(m_hp->type == "hellinger") {
+      double trueScore = 0.0, falseScore = 0.0, p, p_root;
+      Eigen::VectorXd rootYStats = *m_rootYStats;
+      double trueCount = m_trueWCounts.sum();
+      double falseCount = m_falseWCounts.sum();
+
+      if(trueCount > 0) {
+	for (int nTreat = 0; nTreat < m_hp->numTreatments; nTreat++) {
+	  if(*m_rootCounter > 0) {
+	    p_root = rootYStats(nTreat) / static_cast<double>(*m_rootCounter);
+	  }
+	  p = m_trueYStats(nTreat) / static_cast<double>(trueCount);
+	  trueScore += pow(sqrt(p) - sqrt(p_root),2);
+	}
+      }
+      if(falseCount > 0) {
+	for (int nTreat = 0; nTreat < m_hp->numTreatments; nTreat++) {
+	  if(*m_rootCounter > 0) {
+	    p_root = rootYStats(nTreat) / static_cast<double>(*m_rootCounter);
+	  }
+	  p = m_falseYStats(nTreat) / static_cast<double>(falseCount);
+	  falseScore += pow(sqrt(p) - sqrt(p_root),2);
+	}
+      }
+      theta = sqrt((trueCount * trueScore + falseCount * falseScore) / (trueCount + falseCount + 1e-16));
+    }
+  } else { //not causal tree
+    //minimizing the score directly
+    // weighted average for left and right sides
+    //methods -
+    // mse: squared difference between y and yhat
+    double trueMSE=0.0, falseMSE=0.0;
+    if(m_trueCount > 0) {
+      trueMSE = pow(m_trueErr,2) / static_cast<double>(m_trueCount);
+    }
+    if(m_falseCount > 0) {
+      falseMSE = pow(m_falseErr,2) / static_cast<double>(m_falseCount);
+    }
+    theta = (m_trueCount * trueMSE + m_falseCount * falseMSE) / (m_trueCount + m_falseCount + 1e-16);
+
+  } //if not causal
+  return(theta);
+}
+
+//// Methods to fetch the statistics from the Random Test    
+pair<int, double> RandomTest::getParms() {
+  //fetch the parms for the RandomTest as a vector
+  return pair<int, double> (m_feature, m_threshold);
+}
+
+pair<Eigen::VectorXd, Eigen::VectorXd > RandomTest::getStatsClassification(std::string type) const {
   
   //  Eigen::VectorXd trueStats, falseStats;
   pair<Eigen::VectorXd, Eigen::VectorXd> outStats;
@@ -221,38 +402,121 @@ pair<Eigen::VectorXd, Eigen::VectorXd > RandomTest::getStats(std::string type) c
   return outStats;
 }
 
+pair<int, int> RandomTest::getTotCounts() {
+  pair<int, int> outCounts;
+  outCounts = pair<int, int> (m_trueCount, m_falseCount);
+  return outCounts;
+}
+
+pair<double, double> RandomTest::getYMeans() {
+  pair<double, double> outMeans;
+  outMeans = pair<double, double> (m_trueYMean, m_falseYMean);
+  return outMeans;
+}
+
+pair<double, double> RandomTest::getYVars() {
+  pair<double, double> outVars;
+  outVars = pair<double, double> (m_trueYVar, m_falseYVar);
+  return outVars;
+}
+
+pair<double, double> RandomTest::getErrs() {
+  pair<double, double> outErrs;
+  outErrs = pair<double, double> (m_trueErr, m_falseErr);
+  return outErrs;
+}
+
+pair<Eigen::VectorXd, Eigen::VectorXd> RandomTest::getWCounts() {
+  pair<Eigen::VectorXd, Eigen::VectorXd> outWCounts;
+  outWCounts = pair<Eigen::VectorXd, Eigen::VectorXd> (m_trueWCounts, m_falseWCounts);
+  return outWCounts;
+}
+
+pair<Eigen::VectorXd, Eigen::VectorXd> RandomTest::getYStats() {
+  pair<Eigen::VectorXd, Eigen::VectorXd> outYStats;
+  outYStats = pair<Eigen::VectorXd, Eigen::VectorXd> (m_trueYStats, m_falseYStats);
+  return outYStats;
+}
+
+pair<Eigen::VectorXd, Eigen::VectorXd> RandomTest::getYVarStats() {
+  pair<Eigen::VectorXd, Eigen::VectorXd> outYVarStats;
+  outYVarStats = pair<Eigen::VectorXd, Eigen::VectorXd> (m_trueYVarStats, m_falseYVarStats);
+  return outYVarStats;
+}
+
+///////Methods for updating the statistics
 void RandomTest::updateStats(const Sample& sample, const bool& decision) {
+  if(m_hp->type == "classification") {
+    updateStatsClassification(sample, decision);
+  } else {
+    updateStatsRegression(sample, decision);
+  }
+}
+
+void RandomTest::updateStatsClassification(const Sample& sample, const bool& decision) {
   if (decision) {
     m_trueCount += sample.w;
-    m_trueStats(sample.y) += sample.w;
+    m_trueStats(sample.yClass) += sample.w;
     if(sample.W) {
       m_treatTrueCount += sample.w;
-      m_treatTrueStats(sample.y) += sample.w;
+      m_treatTrueStats(sample.yClass) += sample.w;
     } else {
       m_controlTrueCount += sample.w;
-      m_controlTrueStats(sample.y) += sample.w;
+      m_controlTrueStats(sample.yClass) += sample.w;
     }
   } else {
     m_falseCount += sample.w;
-    m_falseStats(sample.y) += sample.w;
+    m_falseStats(sample.yClass) += sample.w;
     if(sample.W) {
       m_treatFalseCount += sample.w;
-      m_treatFalseStats(sample.y) += sample.w;
+      m_treatFalseStats(sample.yClass) += sample.w;
     } else {
       m_controlFalseCount += sample.w;
-      m_controlFalseStats(sample.y) += sample.w;
+      m_controlFalseStats(sample.yClass) += sample.w;
     }
   }
 }
 
-pair<int, double> RandomTest::getParms() {
-  //fetch the parms for the RandomTest as a vector
-  return pair<int, double> (m_feature, m_threshold);
-}
+void RandomTest::updateStatsRegression(const Sample& sample, const bool& decision) {
+  if (decision) { //update right side
+    //update error
+    m_trueErr += sample.w * (sample.yReg - m_trueYMean);
 
-void RandomTest::print() {
-  cout << "m_feature: " << m_feature << ", threshold: " << m_threshold << std::endl;
-}
+    //update mean and variance of y
+    m_trueYVar = (m_trueYVar * m_trueCount + sample.w * pow(m_trueYMean - sample.yReg,2)) / (m_trueCount + sample.w);
+    m_trueYMean = (m_trueYMean * m_trueCount + sample.yReg * sample.w) / (m_trueCount + sample.w);
+
+    //update count
+    m_trueCount += sample.w;
+    //if causal, update the counts
+    if(m_hp->causal==true) {
+      m_trueYStats(sample.W) = (m_trueYStats(sample.W) * m_trueWCounts(sample.W) + sample.yReg * sample.w) / (m_trueWCounts(sample.W) + sample.w);
+      m_trueWCounts(sample.W) += sample.w;
+
+    }
+  } else { //update left side
+    //update error
+    m_falseErr += sample.w * (sample.yReg - m_falseYMean);
+
+    //update mean of y
+    m_falseYVar = (m_falseYVar * m_falseCount + sample.w * pow(m_falseYMean - sample.yReg,2)) / (m_falseCount + sample.w);
+    m_falseYMean = (m_falseYMean * m_falseCount + sample.yReg * sample.w) / (m_falseCount + sample.w);
+    //update count
+    m_falseCount += sample.w;
+
+    //if causal, update the counts
+    if(m_hp->causal==true) {
+      m_falseYStats(sample.W) = (m_falseYStats(sample.W) * m_falseWCounts(sample.W) + sample.yReg * sample.w) / (m_falseWCounts(sample.W) + sample.w);
+      m_falseWCounts(sample.W) += sample.w;
+
+    } 
+  } //close update left side
+} //close method
+
+
+// void RandomTest::print() {
+//   cout << "m_feature: " << m_feature << ", threshold: " << m_threshold << std::endl;
+// }
 
 /****************************************************************************************
  *
@@ -260,18 +524,27 @@ void RandomTest::print() {
  *
  ******************************************************************************************/
 
+/////// Classification Forest Constructors
 //version for the root node
 OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses, 
 		       const int& numFeatures, const Eigen::VectorXd& minFeatRange, 
 		       const Eigen::VectorXd& maxFeatRange, 
                        const int& depth, int& numNodes) :
-  m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
-  m_counter(0.0), m_parentCounter(0.0), m_labelStats(Eigen::VectorXd::Zero(numClasses)),
+  m_nodeNumber(0),
+  m_numClasses(&numClasses),
+  m_depth(depth), 
+  m_isLeaf(true),
+  m_hp(&hp),  
+  m_label(-1),
+  m_counter(0.0),
+  m_treatCounter(0.0), m_controlCounter(0.0),
+  m_parentCounter(0.0), 
+  m_labelStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)), 
   m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(0),
-  m_numNodes(&numNodes), m_treatCounter(0.0), m_controlCounter(0.0),
-  m_ite(Eigen::VectorXd::Zero(numClasses))
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), 
+  m_numNodes(&numNodes),
+  m_tauHat(Eigen::VectorXd::Zero(numClasses))
 {
   //create pointers to the labelstats and counter - these will get passed down to child nodes
   m_rootLabelStats = &m_labelStats;
@@ -285,8 +558,6 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
   }  
   setChildNodeNumbers(-1, -1);
   ++numNodes;
-
-
 }
 
     
@@ -297,19 +568,31 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
                        const int& depth, const Eigen::VectorXd& parentStats, 
 		       int nodeNumber, int parentNodeNumber, int& numNodes,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
-  m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
-  m_counter(0.0), m_parentCounter(parentStats.sum()), m_labelStats(parentStats),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
-  m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
-  m_treatCounter(0.0), m_controlCounter(0.0),
-  m_ite(Eigen::VectorXd::Zero(numClasses)),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
+  m_nodeNumber(nodeNumber),
+  m_parentNodeNumber(parentNodeNumber), 
+  m_numClasses(&numClasses), 
+  m_depth(depth), 
+  m_isLeaf(true), 
+  m_hp(&hp), 
+  m_label(-1),
+  m_counter(0.0), 
+  m_treatCounter(0.0), 
+  m_controlCounter(0.0),
+  m_parentCounter(parentStats.sum()), 
+  m_labelStats(parentStats),
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), 
+  m_numNodes(&numNodes), 
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter),
+  m_tauHat(Eigen::VectorXd::Zero(numClasses))
+{
   //calculate the label
   m_labelStats.maxCoeff(&m_label);
   
   // Creating random tests
   for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
-    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange, rootLabelStats, rootCounter));
+    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, 
+					   minFeatRange, maxFeatRange, 
+					   rootLabelStats, rootCounter));
   }
   setChildNodeNumbers(-1, -1);
   ++numNodes;
@@ -324,15 +607,24 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
 		       const Eigen::VectorXd& controlParentStats, 
 		       int nodeNumber, int parentNodeNumber, int& numNodes,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) :
-  m_numClasses(&numClasses), m_depth(depth), m_isLeaf(true), m_hp(&hp), m_label(-1),
-  m_counter(0.0), m_parentCounter(0.0), m_treatCounter(treatParentStats.sum()), 
+  m_nodeNumber(nodeNumber),
+  m_parentNodeNumber(parentNodeNumber), 
+  m_numClasses(&numClasses), 
+  m_depth(depth), 
+  m_isLeaf(true), 
+  m_hp(&hp), 
+  m_label(-1), 
+  m_counter(0.0),
+  m_treatCounter(treatParentStats.sum()), 
   m_controlCounter(controlParentStats.sum()),
+  m_parentCounter(0.0), 
   m_labelStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatLabelStats(treatParentStats), m_controlLabelStats(controlParentStats),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), m_nodeNumber(nodeNumber),
-  m_parentNodeNumber(parentNodeNumber), m_numNodes(&numNodes), 
-  m_ite(Eigen::VectorXd::Zero(numClasses)),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter) {
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), 
+  m_numNodes(&numNodes), 
+  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter),
+  m_tauHat(Eigen::VectorXd::Zero(numClasses))
+{
 
 
   m_treatCounter = treatParentStats.sum();
@@ -350,15 +642,17 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
   //set ite to be difference from control
   for(int i=0; i < *m_numClasses; ++i) {
     if(m_treatCounter > 0 & m_controlCounter > 0) { 
-      m_ite(i) = (m_treatLabelStats(i)/m_treatCounter) - (m_controlLabelStats(i)/m_controlCounter);
+      m_tauHat(i) = (m_treatLabelStats(i)/m_treatCounter) - (m_controlLabelStats(i)/m_controlCounter);
     } else {
-      m_ite(i) = 0;
+      m_tauHat(i) = 0;
     }
   }
   
   // Creating random tests
   for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
-    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, minFeatRange, maxFeatRange, rootLabelStats, rootCounter));
+    m_onlineTests.push_back(new RandomTest(hp, numClasses, numFeatures, 
+					   minFeatRange, maxFeatRange, 
+					   rootLabelStats, rootCounter));
   }
   setChildNodeNumbers(-1, -1);
   ++numNodes;
@@ -368,12 +662,13 @@ OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numClasses,
 OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
 		       const int& numClasses, int& numNodes,
 		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) : 
-  m_hp(&hp), m_numNodes(&numNodes), m_numClasses(&numClasses),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numClasses(&numClasses), m_hp(&hp),
   m_labelStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)),
   m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
-  m_ite(Eigen::VectorXd::Zero(numClasses))
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numNodes(&numNodes),
+  m_tauHat(Eigen::VectorXd::Zero(numClasses))
 {
 
   //extract information about the node from the vector
@@ -388,16 +683,16 @@ OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& 
   m_counter = nodeParms(7);
   //insert treatCounter and controlCounter  
 
+  //create pointers to the labelstats and counter - these will get passed down to child nodes
   m_rootLabelStats = &m_labelStats;
   m_rootCounter = &m_counter;
-
   
   //if causal need to extract treatment and control separately
   if(m_hp->causal == true) {
      int pos=8;
      //ite
      for(int l=0; l < numClasses; ++l) {
-       m_ite(l) = static_cast<double>(nodeParms(pos+l));
+       m_tauHat(l) = static_cast<double>(nodeParms(pos+l));
      }
     pos=8+numClasses;
 
@@ -523,13 +818,15 @@ OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& 
 		       const int& numClasses, int& numNodes,
 		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange,
 		       const Eigen::VectorXd &rootLabelStats, const double &rootCounter) : 
-  m_hp(&hp), m_numNodes(&numNodes), m_numClasses(&numClasses),
-  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numClasses(&numClasses),  m_hp(&hp), 
   m_labelStats(Eigen::VectorXd::Zero(numClasses)),
   m_treatLabelStats(Eigen::VectorXd::Zero(numClasses)),
   m_controlLabelStats(Eigen::VectorXd::Zero(numClasses)),
-  m_ite(Eigen::VectorXd::Zero(numClasses)),
-  m_rootLabelStats(&rootLabelStats), m_rootCounter(&rootCounter)
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numNodes(&numNodes), 
+  m_rootLabelStats(&rootLabelStats), 
+  m_rootCounter(&rootCounter),
+  m_tauHat(Eigen::VectorXd::Zero(numClasses))
 {
   //extract information about the node from the vector
   //common information whether causal or not
@@ -548,7 +845,7 @@ OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& 
      int pos=8;
      //ite
      for(int l=0; l < numClasses; ++l) {
-       m_ite(l) = static_cast<double>(nodeParms(pos+l));
+       m_tauHat(l) = static_cast<double>(nodeParms(pos+l));
      }
     pos=8+numClasses;
 
@@ -668,18 +965,481 @@ OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& 
     } //close i loop
   } //close causal==false
 } // close method
+  
+/////// Regression Forest Constructors
+//version for the root node
+OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+		       const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
+		       const int& depth, int& numNodes):
+
+  m_nodeNumber(0),
+  m_numClasses(0),
+  m_depth(depth), m_isLeaf(true),  
+  m_hp(&hp),
+  m_counter(0.0), 
+  m_parentCounter(0.0),  
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numNodes(&numNodes), 
+  m_wCounts(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yVarStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yMean(0.0), m_yVar(0.0), m_err(0.0), 
+  m_tauHat(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauVarHat(Eigen::VectorXd::Zero(hp.numTreatments))
+{
+
+  //create pointers to the labelstats and counter - these will get passed down to child nodes
+  m_rootYStats = &m_yStats;
+  m_rootCounter = &m_counter;
+
+  // Creating random tests
+  for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
+    m_onlineTests.push_back(new RandomTest(hp, numFeatures, minFeatRange, maxFeatRange,
+					   *m_rootYStats, *m_rootCounter));
+  }  
+  setChildNodeNumbers(-1, -1);
+  ++numNodes;
+}
+
+//version for those below the root node - not causal
+OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+		       const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
+		       const int& depth,
+		       const double parentCounter,
+		       const double parentYMean,
+		       const double parentYVar,
+		       const double parentErr,
+		       int nodeNumber, int parentNodeNumber, int& numNodes,
+		       const Eigen::VectorXd &rootYStats, const double &rootCounter) :
+  m_nodeNumber(nodeNumber),
+  m_parentNodeNumber(parentNodeNumber),
+  m_depth(depth),
+  m_isLeaf(true), 
+  m_hp(&hp),
+  m_counter(0.0), m_parentCounter(parentCounter), 
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), 
+  m_numNodes(&numNodes),
+  m_rootYStats(&rootYStats), 
+  m_rootCounter(&rootCounter),
+  m_yMean(parentYMean), m_yVar(parentYVar),
+  m_err(parentErr)
+{
+
+  // Creating random tests
+  for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
+    m_onlineTests.push_back(new RandomTest(hp, numFeatures, minFeatRange, maxFeatRange,
+					   *m_rootYStats, *m_rootCounter));
+  }
+  setChildNodeNumbers(-1, -1);
+  ++numNodes;
+}
+
+//version for those below the root node - causal
+OnlineNode::OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+		       const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange, 
+		       const int& depth,
+		       const double parentCounter,
+		       const double parentYMean,
+		       const double parentYVar,
+		       const double parentErr,
+		       const Eigen::VectorXd& parentWCounts,
+		       const Eigen::VectorXd& parentYVarStats,
+		       const Eigen::VectorXd& parentYStats,
+		       int nodeNumber, int parentNodeNumber, int& numNodes,
+		       const Eigen::VectorXd &rootYStats, const double &rootCounter) :
+  m_nodeNumber(nodeNumber),
+  m_parentNodeNumber(parentNodeNumber), 
+  m_depth(depth), 
+  m_isLeaf(true), 
+  m_hp(&hp), 
+  m_counter(0.0), 
+  m_parentCounter(parentCounter), 
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange), 
+  m_numNodes(&numNodes),
+  m_rootYStats(&rootYStats), 
+  m_rootCounter(&rootCounter),
+  m_wCounts(parentWCounts),
+  m_yStats(parentYStats),
+  m_yVarStats(parentYVarStats),
+  m_yMean(parentYMean), 
+  m_yVar(parentYVar),  
+  m_err(parentErr),
+  m_tauHat(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauVarHat(Eigen::VectorXd::Zero(hp.numTreatments))
+{
+
+  // Creating random tests
+  for (int nTest = 0; nTest < hp.numRandomTests; ++nTest) {
+    m_onlineTests.push_back(new RandomTest(hp, numFeatures, minFeatRange, maxFeatRange,
+					   *m_rootYStats, *m_rootCounter));
+  }
+  setChildNodeNumbers(-1, -1);
+  ++numNodes;
+}
+
+//Version to initialize from a vector of information about the node - root version
+OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
+		       int& numNodes, const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange):
+  m_numClasses(0), m_hp(&hp),
+  m_counter(0.0), 
+  m_parentCounter(0.0), 
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numNodes(&numNodes),
+  m_wCounts(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yVarStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauHat(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauVarHat(Eigen::VectorXd::Zero(hp.numTreatments))
+  
+{
+
+  //create pointers to the labelstats and counter - these will get passed down to child nodes
+  m_rootYStats = &m_yStats;
+  m_rootCounter = &m_counter;
+
+  int numTreatments = hp.numTreatments; //save this for use in below positions. ==1 for non-causal
+
+  //extract information about the node from the vector
+  //common information whether causal or not
+  m_nodeNumber = static_cast<int>(nodeParms(0));
+  m_parentNodeNumber = static_cast<int>(nodeParms(1));
+  m_rightChildNodeNumber = static_cast<int>(nodeParms(2));
+  m_leftChildNodeNumber = static_cast<int>(nodeParms(3));
+  m_depth = static_cast<int>(nodeParms(4));
+  m_isLeaf = static_cast<bool>(nodeParms(5));
+  m_counter = static_cast<double>(nodeParms(6));
+  m_parentCounter = static_cast<double>(nodeParms(7));
+  m_yMean = static_cast<double>(nodeParms(8)); //prediction for the node
+  m_yVar = static_cast<double>(nodeParms(9)); //variance estimate for the node
+  m_err = static_cast<double>(nodeParms(10)); //prediction for the node
+
+  int pos=11;
+  if(m_hp->causal == true) {
+    //if causal need to extract tauHat mean and variance, treatment counts, and y statistics
+     //mean
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_tauHat(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+ 
+     //variance
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_tauVarHat(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract treatment counts
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_wCounts(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract statistics about y
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_yStats(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract statistics about yvar
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_yVarStats(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+  } //close causal == true
+  
+  //get the feature and threshold for the best test to point to later 
+  int bt_feat = -1;
+  double bt_threshold = 0;
+  if(m_isLeaf == false) {
+    bt_feat = nodeParms(pos);
+    bt_threshold = nodeParms(pos + 1);
+  } //close isLeaf
+  pos = pos + 2;
+  
+  //for all nodes (leaf or not) create the randomtests
+  
+  RandomTest* rt;
+  for(int nRandTest=0; nRandTest < m_hp->numRandomTests; nRandTest++) {
+    int feature = nodeParms(pos);
+    double threshold = nodeParms(pos + 1);
+    pos = pos + 2;
+
+    int trueYMean = nodeParms(pos);
+    int trueYVar = nodeParms(pos+1);
+    int trueCount = static_cast<int>(nodeParms(pos+2));
+    int trueErr = nodeParms(pos+3);
+    pos = pos + 4;
+    
+    int falseYMean = nodeParms(pos);
+    int falseYVar = nodeParms(pos+1);
+    int falseCount = static_cast<int>(nodeParms(pos+2));
+    int falseErr = nodeParms(pos+3);
+    pos = pos + 4;
+    
+
+    if(m_hp->causal == true) {
+      //prepare vectors to create the random test
+      Eigen::VectorXd trueWCounts = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseWCounts = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd trueYStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseYStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd trueYVarStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseYVarStats = Eigen::VectorXd::Zero(numTreatments);
+    
+      //add counts
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueWCounts(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseWCounts(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      
+      //add y stats
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueYStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseYStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+
+      //add yvar stats
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueYVarStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseYVarStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+
+    
+      //create the random test from the vectors
+      rt = new RandomTest(hp, 
+			  feature, threshold,
+			  trueYMean, falseYMean,
+			  trueYVar, falseYVar,
+			  trueCount, falseCount,
+			  trueErr, falseErr,
+			  trueWCounts, falseWCounts,
+			  trueYStats, falseYStats,
+			  trueYVarStats, falseYVarStats,
+			  *m_rootYStats, *m_rootCounter);
+      
+      m_onlineTests.push_back(rt);
+    } else {//causal == false 
+      rt = new RandomTest(hp, 
+			  feature, threshold,
+			  trueYMean, falseYMean,
+			  trueYVar, falseYVar,
+			  trueCount, falseCount,
+			  trueErr, falseErr,
+			  *m_rootYStats, *m_rootCounter);
+      
+      m_onlineTests.push_back(rt);
+    }
+    // check if the best test is the same as this random test.  if so point to it
+    if(m_isLeaf == false) {
+      if(bt_feat == feature & bt_threshold == threshold) {
+	m_bestTest = rt;
+      }
+    }
+  } //close nRandTest loop
+} // close method
+  
+
+//Version to initialize from a vector of information about the node - below root version
+OnlineNode::OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
+		       int& numNodes, const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange,
+		       const Eigen::VectorXd &rootYStats, const double &rootCounter):
+  m_numClasses(0), m_hp(&hp),
+  m_counter(0.0), 
+  m_parentCounter(0.0), 
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange),
+  m_numNodes(&numNodes),
+  m_rootYStats(&rootYStats), 
+  m_rootCounter(&rootCounter),
+  m_wCounts(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_yVarStats(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauHat(Eigen::VectorXd::Zero(hp.numTreatments)),
+  m_tauVarHat(Eigen::VectorXd::Zero(hp.numTreatments))
+  
+{
+  int numTreatments = hp.numTreatments; //save this for use in below positions. ==1 for non-causal
+
+  //extract information about the node from the vector
+  //common information whether causal or not
+  m_nodeNumber = static_cast<int>(nodeParms(0));
+  m_parentNodeNumber = static_cast<int>(nodeParms(1));
+  m_rightChildNodeNumber = static_cast<int>(nodeParms(2));
+  m_leftChildNodeNumber = static_cast<int>(nodeParms(3));
+  m_depth = static_cast<int>(nodeParms(4));
+  m_isLeaf = static_cast<bool>(nodeParms(5));
+  m_counter = static_cast<double>(nodeParms(6));
+  m_parentCounter = static_cast<double>(nodeParms(7));
+  m_yMean = static_cast<double>(nodeParms(8)); //prediction for the node
+  m_yVar = static_cast<double>(nodeParms(9)); //variance estimate for the node
+  m_err = static_cast<double>(nodeParms(10)); //prediction for the node
+
+  int pos=11;
+  if(m_hp->causal == true) {
+    //if causal need to extract tauHat mean and variance, treatment counts, and y statistics
+     //mean
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_tauHat(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+ 
+     //variance
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_tauVarHat(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract treatment counts
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_wCounts(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract statistics about y
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_yStats(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+    //extract statistics about yvar
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      m_yVarStats(nTreat) = static_cast<double>(nodeParms(pos+nTreat));
+    }
+    pos=pos+numTreatments;
+
+  } //close causal == true
+  
+  //get the feature and threshold for the best test to point to later 
+  int bt_feat = -1;
+  double bt_threshold = 0;
+  if(m_isLeaf == false) {
+    bt_feat = nodeParms(pos);
+    bt_threshold = nodeParms(pos + 1);
+  } //close isLeaf
+  pos = pos + 2;
+  
+  //for all nodes (leaf or not) create the randomtests
+  
+  RandomTest* rt;
+  for(int nRandTest=0; nRandTest < m_hp->numRandomTests; nRandTest++) {
+    int feature = nodeParms(pos);
+    double threshold = nodeParms(pos + 1);
+    pos = pos + 2;
+
+    int trueYMean = nodeParms(pos);
+    int trueYVar = nodeParms(pos+1);
+    int trueCount = static_cast<int>(nodeParms(pos+2));
+    int trueErr = nodeParms(pos+3);
+    pos = pos + 4;
+    
+    int falseYMean = nodeParms(pos);
+    int falseYVar = nodeParms(pos+1);
+    int falseCount = static_cast<int>(nodeParms(pos+2));
+    int falseErr = nodeParms(pos+3);
+    pos = pos + 4;
+    
+
+    if(m_hp->causal == true) {
+      //prepare vectors to create the random test
+      Eigen::VectorXd trueWCounts = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseWCounts = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd trueYStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseYStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd trueYVarStats = Eigen::VectorXd::Zero(numTreatments);
+      Eigen::VectorXd falseYVarStats = Eigen::VectorXd::Zero(numTreatments);
+    
+      //add counts
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueWCounts(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseWCounts(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      
+      //add y stats
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueYStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseYStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+
+      //add yvar stats
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	trueYVarStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+      for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+	falseYVarStats(nTreat) = nodeParms(pos + nTreat);
+      }
+      pos = pos + numTreatments;
+
+    
+      //create the random test from the vectors
+      rt = new RandomTest(hp, 
+			  feature, threshold,
+			  trueYMean, falseYMean,
+			  trueYVar, falseYVar,
+			  trueCount, falseCount,
+			  trueErr, falseErr,
+			  trueWCounts, falseWCounts,
+			  trueYStats, falseYStats,
+			  trueYVarStats, falseYVarStats,
+			  *m_rootYStats, *m_rootCounter);
+      
+      m_onlineTests.push_back(rt);
+    } else {//causal == false 
+      rt = new RandomTest(hp, 
+			  feature, threshold,
+			  trueYMean, falseYMean,
+			  trueYVar, falseYVar,
+			  trueCount, falseCount,
+			  trueErr, falseErr,
+			  *m_rootYStats, *m_rootCounter);
+      
+      m_onlineTests.push_back(rt);
+    }
+    // check if the best test is the same as this random test.  if so point to it
+    if(m_isLeaf == false) {
+      if(bt_feat == feature & bt_threshold == threshold) {
+	m_bestTest = rt;
+      }
+    }
+  } //close nRandTest loop
+} // close method
+  
+
 
     
 OnlineNode::~OnlineNode() {
   if (m_isLeaf == false) {
     delete m_leftChildNode;
     delete m_rightChildNode;
-    //delete m_bestTest; //already deleted by the below
-  }  //else { //removed 4/13/2019 - not deleting onlineTests once best test is defined
+  }
   for (int nTest = 0; nTest < m_hp->numRandomTests; nTest++) {
     delete m_onlineTests[nTest];
   }
-  //}
 }
 
 //set the child node numbers if needed 
@@ -687,27 +1447,36 @@ void OnlineNode::setChildNodeNumbers(int rightChildNodeNumber, int leftChildNode
   m_rightChildNodeNumber = rightChildNodeNumber;
   m_leftChildNodeNumber = leftChildNodeNumber;
 }
-    
+ 
+/// update node from a sample   
 void OnlineNode::update(const Sample& sample) {
+  if(m_hp->type=="classification") {
+    this->updateClassification(sample);
+  } else {
+    this->updateRegression(sample);
+  }
+}
+
+void OnlineNode::updateClassification(const Sample& sample) {
   m_counter += sample.w;
-  m_labelStats(sample.y) += sample.w;
+  m_labelStats(sample.yClass) += sample.w;
 
   //increment treatment and control stats if a causal tree
   if(m_hp->causal == true) {
     if(sample.W) {
       m_treatCounter += sample.w;
-      m_treatLabelStats(sample.y) += sample.w;
+      m_treatLabelStats(sample.yClass) += sample.w;
     } else {
       m_controlCounter += sample.w;
-      m_controlLabelStats(sample.y) += sample.w;
+      m_controlLabelStats(sample.yClass) += sample.w;
     }
 
     //update the ITE
     for(int i=0; i < *m_numClasses; ++i) {
       if(m_treatCounter > 0 & m_controlCounter > 0) {
-	m_ite(i) = (m_treatLabelStats(i)/m_treatCounter) - (m_controlLabelStats(i)/m_controlCounter); 
+	m_tauHat(i) = (m_treatLabelStats(i)/m_treatCounter) - (m_controlLabelStats(i)/m_controlCounter); 
       } else {
-	m_ite(i) = 0;
+	m_tauHat(i) = 0;
       }
     }
   } //close causal == TRUE
@@ -752,7 +1521,7 @@ void OnlineNode::update(const Sample& sample) {
 
       // Split - initializing with versions beyond the root node
       if(m_hp->causal == false) {
-	      pair<Eigen::VectorXd, Eigen::VectorXd> parentStats = m_bestTest->getStats("all");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> parentStats = m_bestTest->getStatsClassification("all");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
 						m_minFeatRange->rows(), *m_minFeatRange, 
@@ -766,8 +1535,8 @@ void OnlineNode::update(const Sample& sample) {
 					       m_nodeNumber, *m_numNodes,
 					       *m_rootLabelStats, *m_rootCounter);
       } else { // causal==true
-	      pair<Eigen::VectorXd, Eigen::VectorXd> treatParentStats = m_bestTest->getStats("treat");      
-	      pair<Eigen::VectorXd, Eigen::VectorXd> controlParentStats = m_bestTest->getStats("control");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> treatParentStats = m_bestTest->getStatsClassification("treat");      
+	      pair<Eigen::VectorXd, Eigen::VectorXd> controlParentStats = m_bestTest->getStatsClassification("control");      
 
 	      m_rightChildNode = new OnlineNode(*m_hp, *m_numClasses,
 						m_minFeatRange->rows(), *m_minFeatRange, 
@@ -790,29 +1559,205 @@ void OnlineNode::update(const Sample& sample) {
       //set the child node numbers now that nodes have been created
       setChildNodeNumbers(newNodeNumber, newNodeNumber + 1);
     }
-   } else {
+  } else {
     if (m_bestTest->eval(sample)) {
       m_rightChildNode->update(sample);
     } else {
       m_leftChildNode->update(sample);
     }
-   }
+  }
+} //close updateClassification
+
+
+void OnlineNode::updateRegression(const Sample& sample) {
+
+  //setting this value here breaking somewhere else
+  int counter = m_counter + m_parentCounter;
+
+  m_yMean = (m_yMean * counter + sample.yReg * sample.w) / (counter + sample.w);
+  if(counter + sample.w > 1) {
+    m_yVar = (m_yVar * (counter-1) + sample.w * pow(m_yMean - sample.yReg,2)) / (counter + sample.w - 1);
+  } else {
+    m_yVar = sample.w * pow(m_yMean - sample.yReg,2);
+  }
+  m_counter += sample.w;
+  m_err += sample.w * (sample.yReg - m_yMean);
+
+
+  //variance: Infinitesmal Jacknife (Wager 2014) - resample bootstrap
+  //Var_IJ = \Sum_{i=1}^n Cov(N_i, t(x))^2
+  // summing for each sample i. 
+  // N_i = # times bootstrap included
+  // t(x) = prediction for the tree
+  // this function called for each try sampled from Pois(1.0)
+  // Cov(N_i, t(x)) = (b-1)^{-1} sum((x - mean(x)) * (N - 1))
+  //   => increment by (x-mean(x))^2 for each bootstrap - as given above
+
+
+  //increment treatment and control stats if a causal tree
+  if(m_hp->causal == true) {
+    //update means for treatment associated with the sample case
+    m_yStats(sample.W) = (m_yStats(sample.W) * m_wCounts(sample.W) + 
+			  sample.yReg * sample.w) / static_cast<double>(m_wCounts(sample.W) + sample.w);
+      
+    //update variances for treatment associated with the sample case
+    if(m_wCounts(sample.W) + sample.w > 1) {
+      m_yVarStats(sample.W) = (m_yVarStats(sample.W) * (m_wCounts(sample.W)-1) + 
+			       pow(m_yStats(sample.W) - sample.yReg,2) * sample.w) /
+	(m_wCounts(sample.W) + sample.w - 1);
+    } else {
+      m_yVarStats(sample.W) = pow(m_yStats(sample.W) - sample.yReg,2) * sample.w;
+    }
+    //increment count
+    m_wCounts(sample.W) += sample.w;
+
+    
+
+    //update the Treatment Effect estimates (note - update all just in case needed for a comparison)
+    for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+      m_tauHat(nTreat) = m_yStats(nTreat) - m_yStats(0);
+      
+      //calculate tau variance estimate as a pooled estimate between treatment and control
+      m_tauVarHat(nTreat) = 0;
+      int denom=0;
+      if(m_wCounts(nTreat) > 1) {
+	m_tauVarHat(nTreat) = m_yVarStats(nTreat) * (1.0 / (m_wCounts(nTreat)-1));
+	denom += 1.0 / (m_wCounts(nTreat)-1);
+      }
+      if(m_wCounts(0) > 1) {
+	m_tauVarHat(nTreat) = m_yVarStats(0) * (1.0 / (m_wCounts(0)-1));
+	denom += 1.0 / (m_wCounts(0)-1);
+      }
+      if(denom > 0) {
+	m_tauVarHat(nTreat) = m_tauVarHat(nTreat) / denom;
+      } else {
+	m_tauVarHat(nTreat) = 0;
+      }
+    }
+  } //close causal == TRUE
+
+  if (m_isLeaf == true) {
+    // Update online tests
+    for (vector<RandomTest*>::iterator itr = m_onlineTests.begin(); 
+	 itr != m_onlineTests.end(); ++itr) {
+      (*itr)->update(sample);
+    }
+    
+    // Decide for split
+    if (shouldISplit()) {
+      m_isLeaf = false;
+      
+      // Find the best online test
+      int nTest = 0, minIndex = 0;
+      double minScore = 1, score;
+      for (vector<RandomTest*>::const_iterator itr(m_onlineTests.begin()); 
+	   itr != m_onlineTests.end(); ++itr, nTest++) {
+	score = (*itr)->score();
+	if (score < minScore) {
+	  minScore = score;
+	  minIndex = nTest;
+	}
+      }
+      m_bestTest = m_onlineTests[minIndex];
+      
+      //Figure out the next available nodeNumber - then increment the one for the tree
+      int newNodeNumber = *m_numNodes;
+      
+      // Split - initializing with versions beyond the root node
+      pair<int, int> parentTotCounts=m_bestTest->getTotCounts();
+      pair<double, double> parentYMeans=m_bestTest->getYMeans();
+      pair<double, double> parentYVars=m_bestTest->getYVars();
+      pair<double, double> parentErrs=m_bestTest->getErrs();
+      if(m_hp->causal == false) {
+	m_rightChildNode = new OnlineNode(*m_hp,
+					  m_minFeatRange->rows(), *m_minFeatRange, 
+					  *m_maxFeatRange, m_depth + 1, 
+					  parentTotCounts.first, 
+					  parentYMeans.first, 
+					  parentYVars.first, 
+					  parentErrs.first, 
+					  newNodeNumber, 
+					  m_nodeNumber, *m_numNodes,
+					  *m_rootYStats, *m_rootCounter
+					  );
+	m_leftChildNode = new OnlineNode(*m_hp, m_minFeatRange->rows(),
+					 *m_minFeatRange, *m_maxFeatRange, m_depth + 1,
+					 parentTotCounts.second, 
+					 parentYMeans.second, 
+					 parentYVars.second, 
+					 parentErrs.second, 
+					 newNodeNumber + 1, 
+					 m_nodeNumber, *m_numNodes,
+					  *m_rootYStats, *m_rootCounter
+					 );
+      } else { // causal==true
+	pair<Eigen::VectorXd, Eigen::VectorXd> parentWCounts = m_bestTest->getWCounts();
+	pair<Eigen::VectorXd, Eigen::VectorXd> parentYStats = m_bestTest->getYStats();
+	pair<Eigen::VectorXd, Eigen::VectorXd> parentYVarStats = m_bestTest->getYVarStats();
+	
+	m_rightChildNode = new OnlineNode(*m_hp, m_minFeatRange->rows(), 
+					  *m_minFeatRange, *m_maxFeatRange, 
+					  m_depth + 1, 
+					  parentTotCounts.first, 
+					  parentYMeans.first, 
+					  parentYVars.first, 
+					  parentErrs.first, 
+					  parentWCounts.first,
+					  parentYStats.first,
+					  parentYVarStats.first,
+					  newNodeNumber, 
+					  m_nodeNumber, *m_numNodes,
+					  *m_rootYStats, *m_rootCounter);
+	m_leftChildNode = new OnlineNode(*m_hp, m_minFeatRange->rows(),
+					 *m_minFeatRange, *m_maxFeatRange, 
+					 m_depth + 1,
+					 parentTotCounts.second, 
+					 parentYMeans.second, 
+					 parentYVars.second, 
+					 parentErrs.second, 
+					 parentWCounts.second,
+					 parentYStats.second,
+					 parentYVarStats.second,
+					 newNodeNumber + 1, 
+					 m_nodeNumber, *m_numNodes,
+					  *m_rootYStats, *m_rootCounter);
+      }
+      
+      //set the child node numbers now that nodes have been created
+      setChildNodeNumbers(newNodeNumber, newNodeNumber + 1);
+    } //close isLeaf==true
+  } else {
+    if (m_bestTest->eval(sample)) {
+      m_rightChildNode->update(sample);
+    } else {
+      m_leftChildNode->update(sample);
+    }
+  }
 }
 
+
 void OnlineNode::eval(const Sample& sample, Result& result) {
+  if(m_hp->type=="classification") {
+    this->evalClassification(sample, result);
+  } else {
+    this->evalRegression(sample, result);
+  }
+}
+
+void OnlineNode::evalClassification(const Sample& sample, Result& result) {
   if (m_isLeaf == true) {
     if (m_counter + m_parentCounter) {
-      result.confidence = m_labelStats / (m_counter + m_parentCounter);
-      result.prediction = m_label;
+      result.confidence = m_labelStats / static_cast<double>(m_counter + m_parentCounter);
+      result.predictionClassification = m_label;
       if(m_hp->causal == true) {
-	result.ite = m_ite;
+	result.tauHat = m_tauHat;
       } else {
-	result.ite = Eigen::VectorXd::Zero(*m_numClasses);
+	result.tauHat = Eigen::VectorXd::Zero(*m_numClasses);
       }
     } else {
       result.confidence = Eigen::VectorXd::Constant(m_labelStats.rows(), 1.0 / *m_numClasses);
-      result.prediction = 0;
-      result.ite = Eigen::VectorXd::Zero(*m_numClasses);
+      result.predictionClassification = 0;
+      result.tauHat = Eigen::VectorXd::Zero(*m_numClasses);
     }
   } else {
     if (m_bestTest->eval(sample)) {
@@ -823,8 +1768,136 @@ void OnlineNode::eval(const Sample& sample, Result& result) {
   }
 }
 
+void OnlineNode::evalRegression(const Sample& sample, Result& result) {
+  if (m_isLeaf == true) {
+    if (m_counter + m_parentCounter > 0) {
+      result.predictionVarianceRegression = m_yVar;
+      result.predictionRegression = m_yMean;
+      //result.weight = m_counter+m_parentCounter;
+      if(m_hp->causal == true) {
+	result.tauHat = m_tauHat;
+      }
+    } else {
+      result.predictionVarianceRegression = 1.0;
+      result.predictionRegression = 0;
+      //result.weight = 0;
+      result.tauHat = Eigen::VectorXd::Zero(m_hp->numTreatments);
+    }
+  } else { //if not a leaf - recurse
+    if (m_bestTest->eval(sample)) {
+      //first check if the child node has any counts - if not, use this node
+      double count = m_rightChildNode->getCount();
+      if(count > 0) {
+	m_rightChildNode->eval(sample, result);
+      } else { //if no values have flowed to the child node yet, use the value from this node
+	//does the right side have any?
+	pair<int, int> childCounts=m_bestTest->getTotCounts();
+	if(childCounts.first == 0) {
+	  //child has seen no data, use the parent
+	  result.predictionVarianceRegression = m_yVar;
+	  result.predictionRegression = m_yMean;
+	  //result.weight = m_counter+m_parentCounter;
+	  if(m_hp->causal == true) {
+	    result.tauHat = m_tauHat;
+	  }
+	} else { //child has seen some data, use from best test
+
+	  pair<double, double> childYMeans=m_bestTest->getYMeans();
+	  pair<double, double> childYVars=m_bestTest->getYVars();
+
+	  result.predictionVarianceRegression = childYVars.first;
+	  result.predictionRegression = childYMeans.first;
+	  //result.weight = childCounts.first;
+
+	  if(m_hp->causal == true) {
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childWCounts = m_bestTest->getWCounts();
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childYStats = m_bestTest->getYStats();
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childYVarStats = m_bestTest->getYVarStats();	    
+	    for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+	      result.tauHat(nTreat) = childYStats.first(nTreat) - childYStats.first(0);
+	      //calculate tau variance estimate as a pooled estimate between treatment and control
+	      result.tauVarHat(nTreat) = 0;
+	      int denom=0;
+	      if(childWCounts.first(nTreat) > 1) {
+		result.tauVarHat(nTreat) = childYVarStats.first(nTreat) * (1.0 / (childWCounts.first(nTreat)-1));
+		denom += 1.0 / (childWCounts.first(nTreat)-1);
+	      }
+	      if(childWCounts.first(0) > 1) {
+		result.tauVarHat(nTreat) = childYVarStats.first(0) * (1.0 / (childWCounts.first(0)-1));
+		denom += 1.0 / (childWCounts.first(0)-1);
+	      }
+	      if(denom > 0) {
+		result.tauVarHat(nTreat) = result.tauVarHat(nTreat) / denom;
+	      } else {
+		result.tauVarHat(nTreat) = 0;
+	      }
+	    } //loop nTreat
+	  } //close causal==true
+	} // close child has data
+      } //close else count > 0
+    } else {
+      double count = m_leftChildNode->getCount();
+      if(count > 0) {
+	m_leftChildNode->eval(sample, result);
+      } else { //if no values have flowed to the child node yet, use the value from this node
+	//does the right side have any?
+	pair<int, int> childCounts=m_bestTest->getTotCounts();
+	if(childCounts.second == 0) {
+	  //child has seen no data, use the parent
+	  result.predictionVarianceRegression = m_yVar;
+	  result.predictionRegression = m_yMean;
+	  //result.weight = m_counter+m_parentCounter;
+	  if(m_hp->causal == true) {
+	    result.tauHat = m_tauHat;
+	  }
+	} else { //child has seen some data, use from best test	  
+	  pair<double, double> childYMeans=m_bestTest->getYMeans();
+	  pair<double, double> childYVars=m_bestTest->getYVars();
+	  
+	  result.predictionVarianceRegression = childYVars.second;
+	  result.predictionRegression = childYMeans.second;
+	  //result.weight = childCounts.second;
+
+	  if(m_hp->causal == true) {
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childWCounts = m_bestTest->getWCounts();
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childYStats = m_bestTest->getYStats();
+	    pair<Eigen::VectorXd, Eigen::VectorXd> childYVarStats = m_bestTest->getYVarStats();
+	    for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+	      result.tauHat(nTreat) = childYStats.second(nTreat) - childYStats.second(0);
+	      //calculate tau variance estimate as a pooled estimate between treatment and control
+	      result.tauVarHat(nTreat) = 0;
+	      int denom=0;
+	      if(childWCounts.second(nTreat) > 1) {
+		result.tauVarHat(nTreat) = childYVarStats.second(nTreat) * (1.0 / (childWCounts.second(nTreat)-1));
+		denom += 1.0 / (childWCounts.second(nTreat)-1);
+	      }
+	      if(childWCounts.second(0) > 1) {
+		result.tauVarHat(nTreat) = childYVarStats.second(0) * (1.0 / (childWCounts.second(0)-1));
+		denom += 1.0 / (childWCounts.second(0)-1);
+	      }
+	      if(denom > 0) {
+		result.tauVarHat(nTreat) = result.tauVarHat(nTreat) / denom;
+	      } else {
+		result.tauVarHat(nTreat) = 0;
+	      }
+	    } //loop nTreat
+	  } //close causal==true
+	} // close child has data
+      } //close else count > 0
+    }
+  } //close not a leaf
+}
+
 //version of update to grow from a set of parameters
 void OnlineNode::update(const Eigen::MatrixXd& treeParms) {
+  if(m_hp->type=="classification") {
+    this->updateClassification(treeParms);
+  } else {
+    this->updateRegression(treeParms);
+  }
+}
+
+void OnlineNode::updateClassification(const Eigen::MatrixXd& treeParms) {
   if(m_isLeaf == false) { // if its a leaf then theres no splitting to do
     
     //search through matrix of parms to find the correct rows and make node parms
@@ -854,7 +1927,47 @@ void OnlineNode::update(const Eigen::MatrixXd& treeParms) {
   }
 }
 
+void OnlineNode::updateRegression(const Eigen::MatrixXd& treeParms) {
+  if(m_isLeaf == false) { // if its a leaf then theres no splitting to do
+    //search through matrix of parms to find the correct rows and make node parms
+    int found=0;
+    for(int i=0; i < treeParms.rows(); ++i) {
+      Eigen::VectorXd nodeParmsVec = treeParms.row(i);
+      int npv_nodeNumber = static_cast<int>(nodeParmsVec(0));
+      if(npv_nodeNumber == m_rightChildNodeNumber) {
+	m_rightChildNode = new OnlineNode(nodeParmsVec, *m_hp, *m_numNodes,
+					  *m_minFeatRange, *m_maxFeatRange,
+					  *m_rootYStats, *m_rootCounter);
+	found++;
+      } else if(npv_nodeNumber == m_leftChildNodeNumber) {
+	m_leftChildNode = new OnlineNode(nodeParmsVec, *m_hp, *m_numNodes,
+					 *m_minFeatRange, *m_maxFeatRange,
+					  *m_rootYStats, *m_rootCounter);
+	found++;
+      }
+      //once the two nodes have been located stop the looping
+      if(found > 1) {
+	break;
+      }
+    }
+    //update the new nodes - making this recursive
+    m_rightChildNode->update(treeParms);
+    m_leftChildNode->update(treeParms);
+  }
+}
+
 bool OnlineNode::shouldISplit() const {
+  bool ret;
+  if(m_hp->type=="classification") {
+    ret = this->shouldISplitClassification();
+  } else {
+    ret = this->shouldISplitRegression();
+  }
+  return(ret);
+}
+
+bool OnlineNode::shouldISplitClassification() const {
+  //check if all obs in the node have the same value
   bool isPure = false;
   for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
     if (m_labelStats(nClass) == m_counter + m_parentCounter) {
@@ -862,6 +1975,30 @@ bool OnlineNode::shouldISplit() const {
       break;
     }
   }
+  if(isPure == false) {
+    if(m_hp->causal == true) {
+      //check if all obs in treatment are pure and all in control are pure
+      // can result in pure==true when treatment pure and control pure but not equal
+      bool isTreatPure = false;
+      bool isControlPure = false;
+      for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	if (m_treatLabelStats(nClass) == m_treatCounter) {
+	  isTreatPure = true;
+	  break;
+	}
+      }
+      for (int nClass = 0; nClass < *m_numClasses; ++nClass) {
+	if (m_controlLabelStats(nClass) == m_treatCounter) {
+	  isControlPure = true;
+	  break;
+	}      
+      }    
+      if(isTreatPure & isControlPure) {
+	isPure = true;
+      }
+    } //close causal == true
+  } //close isPure==false
+  //only split if not pure & depth < max depth & counter > counterthreshould
   if ((isPure) || (m_depth >= m_hp->maxDepth) || (m_counter < m_hp->counterThreshold)) {
     return false;
   } else {
@@ -869,16 +2006,128 @@ bool OnlineNode::shouldISplit() const {
   }
 }
 
-Eigen::VectorXd OnlineNode::exportParms() {
+bool OnlineNode::shouldISplitRegression() const {
+  //check if all obs in the node have the same value
+  //only split if not pure & depth < max depth & counter > counterthreshould
+  if ((m_depth >= m_hp->maxDepth) || (m_counter < m_hp->counterThreshold)) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+
+/// Methods to export parameters to vector for saving
+Eigen::VectorXd OnlineNode::exportParms() { 
+  Eigen::VectorXd out;
+  if(m_hp->type == "classification") {
+    if(m_hp->causal == false) {
+      out=exportParmsClassification();
+    } else {
+      out=exportParmsClassificationCausal();      
+    } 
+  } else {
+    if(m_hp->causal == false) {
+      out=exportParmsRegression();
+    } else {
+      out=exportParmsRegressionCausal();      
+    } 
+  }
+  return(out);
+}
+
+///// Classification Tree Methods
+Eigen::VectorXd OnlineNode::exportParmsClassification() {
   //create vector to export
   
   //see layout spreadsheet for accounting of length
   int vec_size;
-  if(m_hp->causal == true) {
-    vec_size = 15 + 8 * *m_numClasses + 2 * m_hp->numRandomTests * (1 + 2 * *m_numClasses);
-  } else {
-    vec_size = 13 + 3 * *m_numClasses + 2 * m_hp->numRandomTests * (1 + *m_numClasses);
+  vec_size = 13 + 3 * *m_numClasses + 2 * m_hp->numRandomTests * (1 + *m_numClasses);
+ 
+  Eigen::VectorXd nodeParms = Eigen::VectorXd::Zero(vec_size);  //initialize the vector with zeros
+  
+  //fetch the private parameters and save into the Node parms object
+  int pos = 0;
+  nodeParms(0) = static_cast<double>(m_nodeNumber);
+  nodeParms(1) = static_cast<double>(m_parentNodeNumber);
+  nodeParms(2) = static_cast<double>(m_rightChildNodeNumber);
+  nodeParms(3) = static_cast<double>(m_leftChildNodeNumber);
+  nodeParms(4) = static_cast<double>(m_depth);
+  nodeParms(5) = static_cast<double>(m_isLeaf);
+  nodeParms(6) = static_cast<double>(m_label);
+  nodeParms(7) = static_cast<double>(m_counter);
+
+  nodeParms(8) = static_cast<double>(m_parentCounter);
+  nodeParms(9) = static_cast<double>(*m_numClasses);
+  nodeParms(10) = static_cast<double>(m_hp->numRandomTests);
+  pos = 11;
+  
+  //copy in the label stats
+  for(int l=0; l < *m_numClasses;++l) {
+    nodeParms(pos + l) = static_cast<double>(m_labelStats(l));
+  } 
+  pos = 11 + *m_numClasses;
+
+  //layout for causal tree has 4 vectors for each random test
+  pair<int, double> bt_parms;
+  pair<Eigen::VectorXd, Eigen::VectorXd> bt_stats;
+  if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
+    bt_parms = m_bestTest->getParms();
+    bt_stats = m_bestTest->getStatsClassification();
+  } else { //otherwise use zeros (and -1 for the feature)
+    int bt1 = -1;
+    double bt2 = 0;
+    Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);;
+    Eigen::VectorXd bt4 = Eigen::VectorXd::Zero(*m_numClasses);
+    
+    bt_parms = pair<int, double> (bt1, bt2);
+    bt_stats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt4);
   }
+  //write bt information to the vector
+  nodeParms(pos) = bt_parms.first;
+  nodeParms(pos + 1) = bt_parms.second;
+  
+  //copy the information from trueStats and falseStats into the parms
+  //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
+  pos = 13 + *m_numClasses;
+  Eigen::VectorXd trueStats = bt_stats.first;
+  Eigen::VectorXd falseStats = bt_stats.second;
+  
+  for(int i=0; i < *m_numClasses; ++i) {
+    nodeParms(pos+i) = trueStats(i);
+    nodeParms(pos+*m_numClasses+i) = falseStats(i);
+  }
+  
+  pos = 13 + 3 * *m_numClasses;
+  
+  //copy in the random test information
+  for(int i=0; i <  m_hp->numRandomTests; ++i) {
+    pos = 13 + 3 * *m_numClasses + i * (2 * (1 + *m_numClasses)); //for each random test
+    
+    RandomTest rt = *m_onlineTests[i];
+    pair<int, double> rt_parms = rt.getParms();
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_stats = rt.getStatsClassification();
+    //feature
+    nodeParms(pos) = static_cast<double>(rt_parms.first);
+    //threshold
+    nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
+    //copy in the true and false stats
+    Eigen::VectorXd trueStats = rt_stats.first;
+    Eigen::VectorXd falseStats = rt_stats.second;
+    for(int j=0; j < *m_numClasses; ++j) {
+      nodeParms(pos + 2 + j) = trueStats(j);
+      nodeParms(pos + 2 + j + *m_numClasses) = falseStats(j);
+    } //loop j
+  } //loop i
+  return(nodeParms);
+} //close exportParmsClassification
+
+Eigen::VectorXd OnlineNode::exportParmsClassificationCausal() {
+  //create vector to export  
+  //see layout spreadsheet for accounting of length
+  int vec_size;
+  vec_size = 15 + 8 * *m_numClasses + 2 * m_hp->numRandomTests * (1 + 2 * *m_numClasses);
+  
   Eigen::VectorXd nodeParms = Eigen::VectorXd::Zero(vec_size);  //initialize the vector with zeros
   
   //fetch the private parameters and save into the Node parms object
@@ -892,158 +2141,380 @@ Eigen::VectorXd OnlineNode::exportParms() {
   nodeParms(6) = static_cast<double>(m_label);
   nodeParms(7) = static_cast<double>(m_counter);
   
-  if(m_hp->causal == true) {
-    //put in the ite estimates
-    pos=8;
-    for(int l=0; l < *m_numClasses; ++l) {
-      nodeParms(pos + l) = m_ite(l);
-    }
-    pos = 8 + *m_numClasses;
-
-    //layout for causal tree has 4 vectors for each random test
-    nodeParms(pos) = static_cast<double>(m_treatCounter);
-    nodeParms(pos+1) = static_cast<double>(m_controlCounter);
-    nodeParms(pos+2) = static_cast<double>(m_parentCounter);
-    nodeParms(pos+3) = static_cast<double>(*m_numClasses);
-    nodeParms(pos+4) = static_cast<double>(m_hp->numRandomTests);
-    pos = 13 + *m_numClasses;
-    
-
-    //copy in the label stats
-     for(int l=0; l < *m_numClasses;++l) {
-       nodeParms(pos + l) = static_cast<double>(m_labelStats(l));
-       nodeParms(pos + l + *m_numClasses) = static_cast<double>(m_treatLabelStats(l));
-       nodeParms(pos + l + 2 * *m_numClasses) = static_cast<double>(m_controlLabelStats(l));
-     } 
-    pos = 13 + 4 * *m_numClasses;
-
-    pair<int, double> bt_parms;
-    pair<Eigen::VectorXd, Eigen::VectorXd> bt_treatStats;
-    pair<Eigen::VectorXd, Eigen::VectorXd> bt_controlStats;
-    if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
-      bt_parms = m_bestTest->getParms();
-      bt_treatStats = m_bestTest->getStats("treat");
-      bt_controlStats = m_bestTest->getStats("control");
-    } else { //otherwise use zeros (and -1 for the feature)
-      int bt1 = -1;
-      double bt2 = 0;
-      Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);
-
-      bt_parms = pair<int, double> (bt1, bt2);
-      bt_treatStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
-      bt_controlStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
-    }
-    //write bt information to the vector
-    nodeParms(pos) = bt_parms.first;
-    nodeParms(pos + 1) = bt_parms.second;
-    
-    //copy the information from trueStats and falseStats into the parms
-    //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
-    pos = 15 + 4 * *m_numClasses;
-    Eigen::VectorXd treatTrueStats = bt_treatStats.first;
-    Eigen::VectorXd treatFalseStats = bt_treatStats.second;
-    Eigen::VectorXd controlTrueStats = bt_controlStats.first;
-    Eigen::VectorXd controlFalseStats = bt_controlStats.second;
-    
-    for(int i=0; i < *m_numClasses; ++i) {
-      nodeParms(pos+i) = treatTrueStats(i);
-      nodeParms(pos + *m_numClasses + i) = treatFalseStats(i);
-      nodeParms(pos + *m_numClasses * 2 + i) = controlTrueStats(i);
-      nodeParms(pos + *m_numClasses * 3 + i) = controlFalseStats(i);
-    }
-    
-    pos = 15 + 8 * *m_numClasses;
-    
-    //copy in the random test information
-    for(int i=0; i <  m_hp->numRandomTests; ++i) {
-      pos = 15 + 8 * *m_numClasses + i * (2 * (1 + 2 * *m_numClasses)); //for each random test
-      
-      RandomTest rt = *m_onlineTests[i];
-      pair<int, double> rt_parms = rt.getParms();
-      pair<Eigen::VectorXd, Eigen::VectorXd> rt_treatStats = rt.getStats("treat");
-      pair<Eigen::VectorXd, Eigen::VectorXd> rt_controlStats = rt.getStats("control");
-      //feature
-      nodeParms(pos) = static_cast<double>(rt_parms.first);
-      //threshold
-      nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
-      //copy in the true and false stats
-      Eigen::VectorXd treatTrueStats = rt_treatStats.first;
-      Eigen::VectorXd treatFalseStats = rt_treatStats.second;
-      Eigen::VectorXd controlTrueStats = rt_controlStats.first;
-      Eigen::VectorXd controlFalseStats = rt_controlStats.second;
-      for(int j=0; j < *m_numClasses; ++j) {
-	nodeParms(pos + 2 + j) = treatTrueStats(j);
-	nodeParms(pos + 2 + j + *m_numClasses) = treatFalseStats(j);
-	nodeParms(pos + 2 + j + *m_numClasses * 2) = controlTrueStats(j);
-	nodeParms(pos + 2 + j + *m_numClasses * 3) = controlFalseStats(j);
-      } //loop j
-    } //loop i
-  } else { //causal == false
-    nodeParms(8) = static_cast<double>(m_parentCounter);
-    nodeParms(9) = static_cast<double>(*m_numClasses);
-    nodeParms(10) = static_cast<double>(m_hp->numRandomTests);
-    pos = 11;
+  //put in the ite estimates
+  pos=8;
+  for(int l=0; l < *m_numClasses; ++l) {
+    nodeParms(pos + l) = m_tauHat(l);
+  }
+  pos = 8 + *m_numClasses;
   
-    //copy in the label stats
-    for(int l=0; l < *m_numClasses;++l) {
-      nodeParms(pos + l) = static_cast<double>(m_labelStats(l));
-    } 
-    pos = 11 + *m_numClasses;
+  //layout for causal tree has 4 vectors for each random test
+  nodeParms(pos) = static_cast<double>(m_treatCounter);
+  nodeParms(pos+1) = static_cast<double>(m_controlCounter);
+  nodeParms(pos+2) = static_cast<double>(m_parentCounter);
+  nodeParms(pos+3) = static_cast<double>(*m_numClasses);
+  nodeParms(pos+4) = static_cast<double>(m_hp->numRandomTests);
+  pos = 13 + *m_numClasses;
+  
+  
+  //copy in the label stats
+  for(int l=0; l < *m_numClasses;++l) {
+    nodeParms(pos + l) = static_cast<double>(m_labelStats(l));
+    nodeParms(pos + l + *m_numClasses) = static_cast<double>(m_treatLabelStats(l));
+    nodeParms(pos + l + 2 * *m_numClasses) = static_cast<double>(m_controlLabelStats(l));
+  } 
+  pos = 13 + 4 * *m_numClasses;
+  
+  pair<int, double> bt_parms;
+  pair<Eigen::VectorXd, Eigen::VectorXd> bt_treatStats;
+  pair<Eigen::VectorXd, Eigen::VectorXd> bt_controlStats;
+  if(m_isLeaf == false) { //if NOT a leaf then we have a best test
+    bt_parms = m_bestTest->getParms();
+    bt_treatStats = m_bestTest->getStatsClassification("treat");
+    bt_controlStats = m_bestTest->getStatsClassification("control");
+  } else { //otherwise use zeros (and -1 for the feature)
+    int bt1 = -1;
+    double bt2 = 0;
+    Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);
+    
+    bt_parms = pair<int, double> (bt1, bt2);
+    bt_treatStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
+    bt_controlStats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt3);
+  }
+  //write bt information to the vector
+  nodeParms(pos) = bt_parms.first;
+  nodeParms(pos + 1) = bt_parms.second;
+  
+  //copy the information from trueStats and falseStats into the parms
+  //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
+  pos = 15 + 4 * *m_numClasses;
+  Eigen::VectorXd treatTrueStats = bt_treatStats.first;
+  Eigen::VectorXd treatFalseStats = bt_treatStats.second;
+  Eigen::VectorXd controlTrueStats = bt_controlStats.first;
+  Eigen::VectorXd controlFalseStats = bt_controlStats.second;
+  
+  for(int i=0; i < *m_numClasses; ++i) {
+    nodeParms(pos+i) = treatTrueStats(i);
+    nodeParms(pos + *m_numClasses + i) = treatFalseStats(i);
+    nodeParms(pos + *m_numClasses * 2 + i) = controlTrueStats(i);
+    nodeParms(pos + *m_numClasses * 3 + i) = controlFalseStats(i);
+  }
+  
+  pos = 15 + 8 * *m_numClasses;
+  
+  //copy in the random test information
+  for(int i=0; i <  m_hp->numRandomTests; ++i) {
+    pos = 15 + 8 * *m_numClasses + i * (2 * (1 + 2 * *m_numClasses)); //for each random test
+    
+    RandomTest rt = *m_onlineTests[i];
+    pair<int, double> rt_parms = rt.getParms();
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_treatStats = rt.getStatsClassification("treat");
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_controlStats = rt.getStatsClassification("control");
+    //feature
+    nodeParms(pos) = static_cast<double>(rt_parms.first);
+    //threshold
+    nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
+    //copy in the true and false stats
+    Eigen::VectorXd treatTrueStats = rt_treatStats.first;
+    Eigen::VectorXd treatFalseStats = rt_treatStats.second;
+    Eigen::VectorXd controlTrueStats = rt_controlStats.first;
+    Eigen::VectorXd controlFalseStats = rt_controlStats.second;
+    for(int j=0; j < *m_numClasses; ++j) {
+      nodeParms(pos + 2 + j) = treatTrueStats(j);
+      nodeParms(pos + 2 + j + *m_numClasses) = treatFalseStats(j);
+      nodeParms(pos + 2 + j + *m_numClasses * 2) = controlTrueStats(j);
+      nodeParms(pos + 2 + j + *m_numClasses * 3) = controlFalseStats(j);
+    } //loop j
+  } //loop i
+  
+  return(nodeParms);
+} //close exportParmsClassificationCausal
 
-    //layout for causal tree has 4 vectors for each random test
+
+
+Eigen::VectorXd OnlineNode::exportParmsRegression() {
+  //create vector to export
+  
+  int vec_size;
+  vec_size = 13 + 10 * m_hp->numRandomTests;
+ 
+  Eigen::VectorXd nodeParms = Eigen::VectorXd::Zero(vec_size);  //initialize the vector with zeros
+  
+  //fetch the private parameters and save into the Node parms object
+  int pos = 0;
+  nodeParms(0) = static_cast<double>(m_nodeNumber);
+  nodeParms(1) = static_cast<double>(m_parentNodeNumber);
+  nodeParms(2) = static_cast<double>(m_rightChildNodeNumber);
+  nodeParms(3) = static_cast<double>(m_leftChildNodeNumber);
+  nodeParms(4) = static_cast<double>(m_depth);
+  nodeParms(5) = static_cast<double>(m_isLeaf);
+  nodeParms(6) = static_cast<double>(m_counter);
+  nodeParms(7) = static_cast<double>(m_parentCounter);
+  nodeParms(8) = static_cast<double>(m_yMean);
+  nodeParms(9) = static_cast<double>(m_yVar);
+  nodeParms(10) = static_cast<double>(m_err);
+
+  pos = 11;
+
+  //save best test information
+  int bt_feature=-1;
+  double bt_threshold=0;
+  
+  if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
     pair<int, double> bt_parms;
-    pair<Eigen::VectorXd, Eigen::VectorXd> bt_stats;
-    if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
-      bt_parms = m_bestTest->getParms();
-      bt_stats = m_bestTest->getStats();
-    } else { //otherwise use zeros (and -1 for the feature)
-      int bt1 = -1;
-      double bt2 = 0;
-      Eigen::VectorXd bt3 = Eigen::VectorXd::Zero(*m_numClasses);;
-      Eigen::VectorXd bt4 = Eigen::VectorXd::Zero(*m_numClasses);
+    //    pair<double, double> bt_yMeans;
+    //    pair<int, int> bt_counts;
+    //    pair<double, double> bt_err;
 
-      bt_parms = pair<int, double> (bt1, bt2);
-      bt_stats=pair<Eigen::VectorXd, Eigen::VectorXd> (bt3, bt4);
-    }
-    //write bt information to the vector
-    nodeParms(pos) = bt_parms.first;
-    nodeParms(pos + 1) = bt_parms.second;
+    bt_parms = m_bestTest->getParms();
+    bt_feature=bt_parms.first;
+    bt_threshold=bt_parms.second;
+  }
+  //write bt information to the vector
+  nodeParms(pos) = bt_feature;
+  nodeParms(pos + 1) = bt_threshold;
+  pos = pos + 2;
+
+  //copy the information for each random test
+  for(int nRandTest=0; nRandTest <  m_hp->numRandomTests; nRandTest++) {
     
-    //copy the information from trueStats and falseStats into the parms
-    //m_numClass columns for m_trueStats and m_numClass cols for m_falseStats
-    pos = 13 + *m_numClasses;
-    Eigen::VectorXd trueStats = bt_stats.first;
-    Eigen::VectorXd falseStats = bt_stats.second;
+    RandomTest rt = *m_onlineTests[nRandTest];
+    pair<int, double> rt_parms = rt.getParms();
+    int rtFeature = rt_parms.first;
+    double rtThreshold = rt_parms.second;
+
+    //feature & threshold
+    nodeParms(pos) = static_cast<int>(rtFeature);
+    nodeParms(pos + 1) = static_cast<double>(rtThreshold);
+
+    pos = pos + 2;
+
+    //statistics for the random test
+    pair<double, double> rt_yMeans;
+    pair<double, double> rt_yVars;
+    pair<int, int> rt_counts;
+    pair<double, double> rt_err;
+
+    double rt_trueYMean=0;
+    double rt_falseYMean=0;
+    double rt_trueYVar=0;
+    double rt_falseYVar=0;
+    int rt_trueCount=0;
+    int rt_falseCount=0;
+    double rt_trueErr=0;
+    double rt_falseErr=0;
+
+    rt_yMeans = rt.getYMeans();
+    rt_yVars = rt.getYVars();
+    rt_counts = rt.getTotCounts();
+    rt_err = rt.getErrs();
+
+    rt_trueYMean=rt_yMeans.first;
+    rt_falseYMean=rt_yMeans.second;
+    rt_trueYVar=rt_yVars.first;
+    rt_falseYVar=rt_yVars.second;
+    rt_trueCount=rt_counts.first;
+    rt_falseCount=rt_counts.second;
+    rt_trueErr=rt_err.first;
+    rt_falseErr=rt_err.second;
+
+    //copy in the true and false stats
+    nodeParms(pos) = static_cast<double>(rt_trueYMean);
+    nodeParms(pos+1) = static_cast<double>(rt_trueYVar);
+    nodeParms(pos+2) = static_cast<int>(rt_trueCount);
+    nodeParms(pos+3) = static_cast<double>(rt_trueErr);
     
-    for(int i=0; i < *m_numClasses; ++i) {
-      nodeParms(pos+i) = trueStats(i);
-      nodeParms(pos+*m_numClasses+i) = falseStats(i);
-    }
+    pos = pos + 4;
+
+    nodeParms(pos) = static_cast<double>(rt_falseYMean);
+    nodeParms(pos+1) = static_cast<double>(rt_falseYVar);
+    nodeParms(pos+2) = static_cast<int>(rt_falseCount);
+    nodeParms(pos+3) = static_cast<double>(rt_falseErr);
     
-    pos = 13 + 3 * *m_numClasses;
-    
-    //copy in the random test information
-    for(int i=0; i <  m_hp->numRandomTests; ++i) {
-      pos = 13 + 3 * *m_numClasses + i * (2 * (1 + *m_numClasses)); //for each random test
-      
-      RandomTest rt = *m_onlineTests[i];
-      pair<int, double> rt_parms = rt.getParms();
-      pair<Eigen::VectorXd, Eigen::VectorXd> rt_stats = rt.getStats();
-      //feature
-      nodeParms(pos) = static_cast<double>(rt_parms.first);
-      //threshold
-      nodeParms(pos + 1) = static_cast<double>(rt_parms.second);
-      //copy in the true and false stats
-      Eigen::VectorXd trueStats = rt_stats.first;
-      Eigen::VectorXd falseStats = rt_stats.second;
-      for(int j=0; j < *m_numClasses; ++j) {
-	nodeParms(pos + 2 + j) = trueStats(j);
-	nodeParms(pos + 2 + j + *m_numClasses) = falseStats(j);
-      } //loop j
-    } //loop i
-  } //causal condition
+    pos = pos + 4;
+  } //loop nRandTest
   return(nodeParms);
 }
+
+Eigen::VectorXd OnlineNode::exportParmsRegressionCausal() {
+  //create vector to export
+  int numTreatments = m_hp->numTreatments; //save this for use in below positions. ==1 for non-causal
+  
+  int vec_size;
+  vec_size = 13 + 10 * m_hp->numRandomTests + 5 * numTreatments + 6 * numTreatments * m_hp->numRandomTests;
+ 
+  Eigen::VectorXd nodeParms = Eigen::VectorXd::Zero(vec_size);  //initialize the vector with zeros
+  
+  //fetch the private parameters and save into the Node parms object
+  int pos = 0;
+  nodeParms(0) = static_cast<double>(m_nodeNumber);
+  nodeParms(1) = static_cast<double>(m_parentNodeNumber);
+  nodeParms(2) = static_cast<double>(m_rightChildNodeNumber);
+  nodeParms(3) = static_cast<double>(m_leftChildNodeNumber);
+  nodeParms(4) = static_cast<double>(m_depth);
+  nodeParms(5) = static_cast<double>(m_isLeaf);
+  nodeParms(6) = static_cast<double>(m_counter);
+  nodeParms(7) = static_cast<double>(m_parentCounter);
+  nodeParms(8) = static_cast<double>(m_yMean);
+  nodeParms(9) = static_cast<double>(m_yVar);
+  nodeParms(10) = static_cast<double>(m_err);
+
+  pos = 11;
+
+  //add tau hats
+  for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+    nodeParms(pos+nTreat) = static_cast<double>(m_tauHat(nTreat));
+  }
+  pos=pos+numTreatments;
+
+  //add tau variance hat
+  for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+    nodeParms(pos+nTreat) = static_cast<double>(m_tauVarHat(nTreat));
+  }
+  pos=pos+numTreatments;
+ 
+  //add wCounts
+  for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+    nodeParms(pos+nTreat) = static_cast<double>(m_wCounts(nTreat));
+  }
+  pos=pos+numTreatments;
+ 
+  //add y means variance
+  for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+    nodeParms(pos+nTreat) = static_cast<double>(m_yStats(nTreat));
+  }
+  pos=pos+numTreatments;
+
+  //add y means variance
+  for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+    nodeParms(pos+nTreat) = static_cast<double>(m_yVarStats(nTreat));
+  }
+  pos=pos+numTreatments;
+ 
+  //save best test information
+  int bt_feature=-1;
+  double bt_threshold=0;
+  
+  if(m_isLeaf == false) { //if NOT a leaf then we dont have a best test but do have randomtests
+    pair<int, double> bt_parms;
+//     pair<double, double> bt_yMeans;
+//     pair<int, int> bt_counts;
+//     pair<double, double> bt_err;
+
+    bt_parms = m_bestTest->getParms();
+    bt_feature=bt_parms.first;
+    bt_threshold=bt_parms.second;
+  }
+  //write bt information to the vector
+  nodeParms(pos) = bt_feature;
+  nodeParms(pos + 1) = bt_threshold;
+  pos = pos + 2;
+
+  //copy the information for each random test
+  for(int nRandTest=0; nRandTest <  m_hp->numRandomTests; nRandTest++) {
+    
+    RandomTest rt = *m_onlineTests[nRandTest];
+    pair<int, double> rt_parms = rt.getParms();
+    int rtFeature = rt_parms.first;
+    double rtThreshold = rt_parms.second;
+
+    //feature & threshold
+    nodeParms(pos) = static_cast<int>(rtFeature);
+    nodeParms(pos + 1) = static_cast<double>(rtThreshold);
+
+    pos = pos + 2;
+
+    //statistics for the random test
+    pair<double, double> rt_yMeans;
+    pair<double, double> rt_yVars;
+    pair<int, int> rt_counts;
+    pair<double, double> rt_err;
+
+    double rt_trueYMean=0;
+    double rt_falseYMean=0;
+    double rt_trueYVar=0;
+    double rt_falseYVar=0;
+    int rt_trueCount=0;
+    int rt_falseCount=0;
+    double rt_trueErr=0;
+    double rt_falseErr=0;
+
+    rt_yMeans = rt.getYMeans();
+    rt_yVars = rt.getYVars();
+    rt_counts = rt.getTotCounts();
+    rt_err = rt.getErrs();
+
+    rt_trueYMean=rt_yMeans.first;
+    rt_falseYMean=rt_yMeans.second;
+    rt_trueYVar=rt_yVars.first;
+    rt_falseYVar=rt_yVars.second;
+    rt_trueCount=rt_counts.first;
+    rt_falseCount=rt_counts.second;
+    rt_trueErr=rt_err.first;
+    rt_falseErr=rt_err.second;
+
+    //copy in the true and false stats
+    nodeParms(pos) = static_cast<double>(rt_trueYMean);
+    nodeParms(pos+1) = static_cast<double>(rt_trueYVar);
+    nodeParms(pos+2) = static_cast<int>(rt_trueCount);
+    nodeParms(pos+3) = static_cast<int>(rt_trueErr);
+    
+    pos = pos + 4;
+
+    nodeParms(pos) = static_cast<double>(rt_falseYMean);
+    nodeParms(pos+1) = static_cast<double>(rt_falseYVar);
+    nodeParms(pos+2) = static_cast<int>(rt_falseCount);
+    nodeParms(pos+3) = static_cast<int>(rt_falseErr);
+    
+    pos = pos + 4;
+
+    //save additional parameters needed for causal trees
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_yStats=rt.getYStats();
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_yVarStats=rt.getYVarStats();
+    pair<Eigen::VectorXd, Eigen::VectorXd> rt_wCounts=rt.getWCounts();
+
+    Eigen::VectorXd rtTrueYStats = rt_yStats.first;
+    Eigen::VectorXd rtFalseYStats = rt_yStats.second;
+    Eigen::VectorXd rtTrueYVarStats = rt_yVarStats.first;
+    Eigen::VectorXd rtFalseYVarStats = rt_yVarStats.second;
+    Eigen::VectorXd rtTrueWCounts = rt_wCounts.first;
+    Eigen::VectorXd rtFalseWCounts = rt_wCounts.second;
+
+    //add counts
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtTrueWCounts(nTreat));
+    }
+    pos = pos + numTreatments;
+
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtFalseWCounts(nTreat));
+    }
+    pos = pos + numTreatments;
+      
+    //add y stats
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtTrueYStats(nTreat));
+    }
+    pos = pos + numTreatments;
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtFalseYStats(nTreat));
+    }
+    pos = pos + numTreatments;
+
+    //add y var stats
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtTrueYVarStats(nTreat));
+    }
+    pos = pos + numTreatments;
+    for(int nTreat=0; nTreat < numTreatments; nTreat++) {
+      nodeParms(pos+nTreat) = static_cast<double>(rtFalseYVarStats(nTreat));
+    }
+    pos = pos + numTreatments;
+
+  } //loop nRandTest
+  return(nodeParms);
+}
+
 
 //method to recursively return information - updating matrix at the tree level
 void OnlineNode::exportChildParms(vector<Eigen::VectorXd> &treeParmsVector) {
@@ -1068,9 +2539,9 @@ double OnlineNode::getCount() {
 }
 
 //self score for importance calculations
-double OnlineNode::score() {
+double OnlineNode::scoreClassification() {
   Eigen::VectorXd stats=m_labelStats;
-  int count = m_counter + m_parentCounter; 
+  double count = m_counter + m_parentCounter; 
   std::string method=m_hp->method;
 
   double out=0.0;
@@ -1110,16 +2581,65 @@ double OnlineNode::score() {
   return(out);
 }
 
-
-void OnlineNode::printInfo() {
-  cout << "Node Information about Node " << m_nodeNumber << std::endl;
-  cout << "\tisLeaf: " << m_isLeaf << ", rightChildNodeNumber: " << m_rightChildNodeNumber << ", leftChildNodeNumber: " << m_leftChildNodeNumber << std::endl;
+double OnlineNode::scoreRegression() {
+  double score = 0;
+  if(m_hp->causal == true) {
+    //causal: difference in mse from treatment to control
+    if(m_hp->method == "mse") {
+      int cnt = 0;
+      for(int nTreat = 0; nTreat < m_hp->numTreatments; nTreat++) {
+	//if method = mse - total difference from each group to control
+	if(nTreat > 0) {
+	  score += m_wCounts(nTreat) * pow(m_yStats(nTreat) - m_yStats(0),2);
+	  cnt += m_wCounts(nTreat);
+	}
+      }
+      if(cnt > 0) {
+	score = score / static_cast<double>(cnt);
+      } 
+    } else if(m_hp->type=="hellinger") {
+      double p=0, p_root=0;
+      Eigen::VectorXd rootYStats = *m_rootYStats;
+      for(int nTreat = 0; nTreat < m_hp->numTreatments; nTreat++) {
+	if(*m_rootCounter > 0) {
+	  p_root = rootYStats(nTreat) /  static_cast<double>(*m_rootCounter);
+	}
+	if(m_counter + m_parentCounter> 0) {
+	  p = m_yStats(nTreat) /  static_cast<double>(m_counter);
+	}
+	score += pow(sqrt(p) - sqrt(p_root),2);
+      }//loop nTreat
+      score = sqrt(score);
+    } //close hellinger 
+  } else { //non causal - just calculate mse
+    if(m_counter + m_parentCounter > 0) {
+      score = pow(m_err,2) / static_cast<double>(m_counter); 
+    }
+  } //close non-causal
+  return(score);
 }
 
-void OnlineNode::print() {
-  cout << "Node details: " << m_nodeNumber << std::endl;
-  cout << exportParms() << std::endl;
+double OnlineNode::score() {
+  double out;
+  if(m_hp->type=="classification") {
+    out = this->scoreClassification();
+  } else {
+    out = this->scoreRegression();
+  }
+  return(out);
 }
+
+
+
+// void OnlineNode::printInfo() {
+//   cout << "Node Information about Node " << m_nodeNumber << std::endl;
+//   cout << "\tisLeaf: " << m_isLeaf << ", rightChildNodeNumber: " << m_rightChildNodeNumber << ", leftChildNodeNumber: " << m_leftChildNodeNumber << std::endl;
+// }
+
+// void OnlineNode::print() {
+//   cout << "Node details: " << m_nodeNumber << std::endl;
+//   cout << exportParms() << std::endl;
+// }
 
 
 /****************************************************************************************
@@ -1128,19 +2648,20 @@ void OnlineNode::print() {
  *
  ******************************************************************************************/
 
+////// Classification Tree Constructors
 //version to construct with randomization
 OnlineTree::OnlineTree(const Hyperparameters& hp, const int& numClasses, 
 		       const int& numFeatures, 
                        const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) :
-  //  Classifier(hp, numClasses), 
-  m_numClasses(&numClasses), m_hp(&hp), m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
+  m_numClasses(&numClasses), m_hp(&hp), 
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
   
   //initialize here - will get updated later in the program during update
   m_oobe = 0.0;
   m_counter = 0.0;
   m_numNodes = 0;
   //initialize with root node version
-  m_rootNode = new OnlineNode(hp, numClasses, numFeatures, minFeatRange, maxFeatRange, 
+  m_rootNode = new OnlineNode(hp, *m_numClasses, numFeatures, minFeatRange, maxFeatRange, 
   			      0, m_numNodes);
     
   m_name = "OnlineTree";
@@ -1150,10 +2671,10 @@ OnlineTree::OnlineTree(const Hyperparameters& hp, const int& numClasses,
 OnlineTree::OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& hp, 
 		       const int& numClasses, double oobe, double counter,
 		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) :
-  //  Classifier(hp, treeParms(0,9)), 
-  m_hp(&hp),
+  m_numNodes(0),
   m_oobe(oobe), m_counter(counter), 
-  m_numClasses(&numClasses), m_numNodes(0),
+  m_numClasses(&numClasses), 
+  m_hp(&hp),
   m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
 
   //find the max node number from the treeParms matrix - position 0
@@ -1170,11 +2691,62 @@ OnlineTree::OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& 
   
 }
 
+/////// Regression Tree Constructors
+//version to construct with randomization
+OnlineTree::OnlineTree(const Hyperparameters& hp, const int& numFeatures, 
+                       const Eigen::VectorXd& minFeatRange, 
+		       const Eigen::VectorXd& maxFeatRange) :
+  m_numClasses(0), m_hp(&hp), m_minFeatRange(&minFeatRange), 
+  m_maxFeatRange(&maxFeatRange) {
+  
+  //initialize here - will get updated later in the program during update
+  m_oobe = 0.0;
+  m_counter = 0.0;
+  m_numNodes = 0;
+  //initialize with root node version
+  m_rootNode = new OnlineNode(hp, numFeatures, 
+			      minFeatRange, maxFeatRange, 
+  			      0, m_numNodes);
+  m_name = "OnlineTree";
+}
+
+//version to construct from a set of parameters
+OnlineTree::OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& hp, 
+		       double oobe, double counter,
+		       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange) :
+  m_numNodes(0), m_oobe(oobe), 
+  m_counter(counter), m_numClasses(0), 
+  m_hp(&hp),
+  m_minFeatRange(&minFeatRange), m_maxFeatRange(&maxFeatRange) {
+
+  //find the max node number from the treeParms matrix - position 0
+  m_numNodes = treeParms.rows();
+  
+  //initialize with the version that takes parameters
+  m_rootNode = new OnlineNode(treeParms.row(0), hp, m_numNodes, 
+  			      minFeatRange, maxFeatRange);
+
+  //grow the tree based on matrix of parameters - recursive
+  m_rootNode->update(treeParms);
+
+  m_name = "OnlineTree";
+  
+}
+
+
 OnlineTree::~OnlineTree() {
     delete m_rootNode;
 }
     
 void OnlineTree::update(Sample& sample) {
+  if(m_hp->type=="classification") {
+    this->updateClassification(sample);
+  } else {
+    this->updateRegression(sample);
+  }
+}
+
+void OnlineTree::updateClassification(Sample& sample) {
   //increment counter for obs passing through
   m_counter += sample.w;
 
@@ -1182,9 +2754,23 @@ void OnlineTree::update(Sample& sample) {
   Result treeResult;
   eval(sample, treeResult);
   
-  if (treeResult.prediction != sample.y) {
+  if (treeResult.predictionClassification != sample.yClass) {
     m_oobe += sample.w;
   }
+  
+  //update tree parms using this obs
+  m_rootNode->update(sample);
+}
+
+void OnlineTree::updateRegression(Sample& sample) {
+  //increment counter for obs passing through
+  m_counter += sample.w;
+
+  //make a prediction about this obs before update
+  Result treeResult;
+  eval(sample, treeResult);
+  
+  m_oobe += sample.w * pow(sample.yReg - treeResult.predictionRegression,2);  
   
   //update tree parms using this obs
   m_rootNode->update(sample);
@@ -1223,18 +2809,18 @@ vector<Eigen::MatrixXd> OnlineTree::exportParms() {
   return(ret);
 }
 
-void OnlineTree::printInfo() {
-  cout << "Tree Info: ";
-  cout << "m_numNodes: " << m_numNodes << std::endl;
-}
+// void OnlineTree::printInfo() {
+//   cout << "Tree Info: ";
+//   cout << "m_numNodes: " << m_numNodes << std::endl;
+// }
 
-void OnlineTree::print() {
-  cout << "Tree details: " << std::endl;
-  vector<Eigen::MatrixXd> treeParms = exportParms();
-  if(treeParms.size() > 0) {
-    cout << treeParms[0] << std::endl;
-  }
-}
+// void OnlineTree::print() {
+//   cout << "Tree details: " << std::endl;
+//   vector<Eigen::MatrixXd> treeParms = exportParms();
+//   if(treeParms.size() > 0) {
+//     cout << treeParms[0] << std::endl;
+//   }
+// }
 
 double OnlineTree::getOOBE() {
   return(m_oobe);
@@ -1273,6 +2859,7 @@ void OnlineTree::updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd m
  *
  ******************************************************************************************/
 
+///// Classification Forest Constructors
 //version to construct using randomization
 OnlineRF::OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures,
 		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
@@ -1293,7 +2880,7 @@ OnlineRF::OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters
 		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
   //Classifier(hp, numClasses), 
   m_counter(counter), m_oobe(oobe),
-  m_hp(&hp), m_numClasses(&numClasses),
+  m_numClasses(&numClasses), m_hp(&hp), 
   m_minFeatRange(minFeatRange), m_maxFeatRange(maxFeatRange) {
   OnlineTree *tree;
   for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
@@ -1308,19 +2895,63 @@ OnlineRF::OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters
   m_name = "OnlineRF";
 }
 
+///// Regression Forest Constructors
+//version to construct using randomization
+OnlineRF::OnlineRF(const Hyperparameters& hp, const int& numFeatures,
+		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
+  m_counter(0.0), m_oobe(0.0), m_numClasses(0), 
+  m_hp(&hp), m_minFeatRange(minFeatRange), m_maxFeatRange(maxFeatRange) {
+  OnlineTree *tree;
+  for (int nTree = 0; nTree < hp.numTrees; ++nTree) {
+    tree = new OnlineTree(hp, numFeatures, m_minFeatRange, m_maxFeatRange);
+    m_trees.push_back(tree);
+  }
+  m_name = "OnlineRF";
+}
+
+//version to construction from a set of parameters
+OnlineRF::OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters& hp,
+		   double oobe, double counter,
+		   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange) :
+  m_counter(counter), m_oobe(oobe),
+  m_numClasses(0),  
+  m_hp(&hp), 
+  m_minFeatRange(minFeatRange), m_maxFeatRange(maxFeatRange) {
+  OnlineTree *tree;
+  for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
+    //create the trees using method to construct from parameters
+    //initializing oobe and counter to 0 until i can figure that out
+    tree = new OnlineTree(orfParms[nTree], hp, 0, 0.0, 
+    			  m_minFeatRange, m_maxFeatRange);
+    m_trees.push_back(tree);
+
+  }
+
+  m_name = "OnlineRF";
+}
+
 OnlineRF::~OnlineRF() {
   for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
     delete m_trees[nTree];
   }
 }
 
+
 void OnlineRF::update(Sample& sample) {
+  if(m_hp->type=="classification") {
+    this->updateClassification(sample);
+  } else {
+    this->updateRegression(sample);
+  }
+}
+
+void OnlineRF::updateClassification(Sample& sample) {
   m_counter += sample.w;
   Result result(*m_numClasses), treeResult;
   int numTries;
   for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
     numTries = poisson(1.0);
-    if (numTries) {
+    if (numTries > 0) {
       for (int nTry = 0; nTry < numTries; ++nTry) {
 	m_trees[nTree]->update(sample);	
       }
@@ -1332,14 +2963,49 @@ void OnlineRF::update(Sample& sample) {
   
   int pre;
   result.confidence.maxCoeff(&pre);
-  if (pre != sample.y) {
+  if (pre != sample.yClass) {
     m_oobe += sample.w;
   }
 }
 
+void OnlineRF::updateRegression(Sample& sample) {
+  m_counter += sample.w;
+  Result result, treeResult;
+  result.predictionRegression = 0;
+
+  int numTries;
+  int counter = 0;
+  //loop through all trees - boosting to update trees with data
+  for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
+    numTries = poisson(1.0);
+    if (numTries > 0) {
+      for (int nTry = 0; nTry < numTries; ++nTry) {
+	m_trees[nTree]->update(sample);	
+      }
+    } else {
+      //if no training with this sample
+      //out of bag estimation of error (variance and tau not needed)
+      m_trees[nTree]->eval(sample, treeResult);
+      result.predictionRegression += treeResult.predictionRegression;
+      counter++;
+    }
+  }
+  if(counter > 0) {
+    m_oobe += sample.w * pow(sample.yReg - result.predictionRegression / static_cast<double>(counter),2);  
+  }
+}
+
 void OnlineRF::eval(Sample& sample, Result& result) {
+  if(m_hp->type=="classification") {
+    this->evalClassification(sample, result);
+  } else {
+    this->evalRegression(sample, result);
+  }
+}
+
+void OnlineRF::evalClassification(Sample& sample, Result& result) {
   Result treeResult;
-  Eigen::MatrixXd iteAll(m_hp->numTrees, *m_numClasses);
+  Eigen::MatrixXd tauHatAll(m_hp->numTrees, *m_numClasses);
 
   for (int nTree = 0; nTree < m_hp->numTrees; ++nTree) {
     //calculate the prediction for the tree
@@ -1347,10 +3013,10 @@ void OnlineRF::eval(Sample& sample, Result& result) {
     //calculate the aggregate confidences and ITEs
     result.confidence += treeResult.confidence;
     if(m_hp->causal == true) {
-      result.ite += treeResult.ite;
+      result.tauHat += treeResult.tauHat;
 
       //copy all ITE estimates from the tree into the matrix
-      iteAll.row(nTree) = treeResult.ite;
+      tauHatAll.row(nTree) = treeResult.tauHat;
     }
   }
 
@@ -1358,16 +3024,136 @@ void OnlineRF::eval(Sample& sample, Result& result) {
   result.confidence /= m_hp->numTrees;
 
   //prediction is associated with the max confidence
-  result.confidence.maxCoeff(&result.prediction);
+  result.confidence.maxCoeff(&result.predictionClassification);
 
   if(m_hp->causal == true) {
     //mean ITE estimate
-    result.ite /= m_hp->numTrees;
+    result.tauHat /= m_hp->numTrees;
 
     //all ITE estimates
-    result.iteAllTrees = iteAll;
+    result.tauHatAllTrees = tauHatAll;
   }
 }
+
+void OnlineRF::evalRegression(Sample& sample, Result& result) {
+  Eigen::MatrixXd tauHatAll(m_hp->numTrees, m_hp->numTreatments);
+  double yVarHat=0; 
+  double correction=0;
+  Eigen::VectorXd tauVarHat = Eigen::VectorXd::Zero(m_hp->numTreatments);
+  double correction2=0;
+  Eigen::VectorXd yHatAll(m_hp->numTrees);
+  //int totWeight=0;
+  
+  for(int nTree = 0; nTree < m_hp->numTrees; nTree++) {
+    Result treeResult;
+
+    //calculate the prediction for the tree
+    m_trees[nTree]->eval(sample, treeResult);
+    
+    //prediction: average of prediction from individual trees (not weighted)
+    //result.predictionRegression += treeResult.predictionRegression * static_cast<double>(treeResult.weight);
+    //totWeight += treeResult.weight;    
+    result.predictionRegression += treeResult.predictionRegression;
+
+    yHatAll(nTree) = treeResult.predictionRegression;
+    
+    if(m_hp->causal == true) {
+      result.tauHat += treeResult.tauHat;
+      //copy all ITE estimates from the tree into the matrix
+      tauHatAll.row(nTree) = treeResult.tauHat;
+
+    } //close causal==true
+  } // loop nTree
+  
+  //divide out for averages
+  result.predictionRegression = result.predictionRegression / static_cast<double>(m_hp->numTrees);
+//   if(totWeight > 0) {
+//     result.predictionRegression = result.predictionRegression / totWeight;
+//   }
+  result.yHatAllTrees = yHatAll;
+  if(m_hp->causal == true) {
+    result.tauHat /= m_hp->numTrees;
+    result.tauHatAllTrees = tauHatAll;
+  }
+
+  //Infinitesmal Jacknife - Wager 2014, bootstrap across trees
+  // V_IJ = sum(Cov(^2))
+  // Cov = B * sum((y - yhat) * (n - nhat))
+  // cycle back through the trees to calc the cov
+  for (int nTree = 0; nTree < m_hp->numTrees; nTree++) {
+    //calculate the prediction for the tree
+    yVarHat += pow(yHatAll(nTree) - result.predictionRegression, 2);
+    correction += pow(yHatAll(nTree) - result.predictionRegression, 2);
+
+    if(m_hp->causal==true) {
+      for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+	tauVarHat(nTreat) += pow(tauHatAll(nTree, nTreat) - result.tauHat(nTreat), 2);
+	correction2 += pow(tauHatAll(nTree, nTreat) - result.tauHat(nTreat), 2);
+      }
+    }
+
+  }
+  //IJ variance estimate = Cov(N, t)^2
+  yVarHat = yVarHat / (m_hp->numTrees - 1);
+
+  if(m_hp->causal==true) {
+    for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+      tauVarHat(nTreat) = tauVarHat(nTreat) / (m_hp->numTrees - 1);
+    }
+  }
+ 
+  //IJ-unbiased correction in case of small number of bootstrap samples: V_IJ-U = V_IJ - n/b^2 * sum((t-that)^2)
+  //  yHatVar = yHatVar - 1/pow(b,2) * correction;
+  //  if(m_hp->causal==true) {
+  //    for(int nTreat=0; nTreat < m_hp->numTreatments; nTreat++) {
+  //      tauHatVar(nTreat) = tauHatVar(nTreat) - 1/pow(b2,2) * correction2;
+  //    }
+  //  }
+
+  //save results
+  result.predictionVarianceRegression = yVarHat;
+  if(m_hp->causal==true) {
+    result.tauVarHat = tauVarHat;
+  }
+}
+
+      
+//   //if more than one unit in nodes pooled variance estimate
+//   if(m_hp->counterThreshold > 2) { 
+//     result.predictionVarianceRegression /= static_cast<double>(m_hp->numTrees - 1);
+//     for(int nTreat=1; nTreat < m_hp->numTreatments; nTreat++) {
+//       result.tauVarHat(nTreat) /= static_cast<double>(m_hp->numTrees - 1);
+//     }
+//   }
+//   //Variances for counterThreshold == 2:
+//   // use empirical variance from each tree
+//   if(m_hp->counterThreshold <= 2) {
+//     double sampVar = 0;
+//     Eigen::VectorXd sampVarTau = Eigen::VectorXd::Zero(m_hp->numTreatments);
+
+//     for (int nTree = 0; nTree < m_hp->numTrees; nTree++) {
+//       m_trees[nTree]->eval(sample, treeResult);
+//       //sample variance across trees
+//       sampVar += pow(treeResult.predictionRegression - result.predictionRegression,2);
+
+//       for(int nTreat=1; nTreat < m_hp->numTreatments; nTreat++) {
+// 	sampVarTau(nTreat) += pow(treeResult.tauHat(nTreat) - result.tauHat(nTreat), 2);
+//       }
+//     }
+//     //divide out by weights
+//     if((m_hp->numTrees - 1) > 0) {
+//       sampVar /= (m_hp->numTrees - 1);
+//     }
+//     result.predictionVarianceRegression = sampVar;
+
+//     for(int nTreat=1; nTreat < m_hp->numTreatments; nTreat++) {
+//     if((m_hp->numTrees - 1) > 0) {
+//       sampVarTau(nTreat) /= (m_hp->numTrees - 1);
+//     }
+//     result.tauVarHat(nTreat) = sampVarTau(nTreat);
+//     }
+//   }
+//}
 
 //return the parameters updated by the update method
 vector<Eigen::MatrixXd> OnlineRF::exportParms() {
@@ -1387,20 +3173,20 @@ double OnlineRF::getCounter() {
   return(m_counter);
 }
 
-void OnlineRF::printInfo() {
-  cout << "RF Info: ";
-  cout << "Number of trees: " << m_trees.size() << std::endl;
-}
+// void OnlineRF::printInfo() {
+//   cout << "RF Info: ";
+//   cout << "Number of trees: " << m_trees.size() << std::endl;
+// }
 
-void OnlineRF::print() {
-  cout << "RF details: " << std::endl;  
-  vector<Eigen::MatrixXd> rfParms = exportParms();
-  for(int nTree=0; nTree < rfParms.size(); ++nTree) {
-    cout << "\tTree: " << nTree << std::endl;
-    cout << "\t\t";
-    cout << rfParms[nTree] << std::endl;
-  }
-}
+// void OnlineRF::print() {
+//   cout << "RF details: " << std::endl;  
+//   vector<Eigen::MatrixXd> rfParms = exportParms();
+//   for(int nTree=0; nTree < rfParms.size(); ++nTree) {
+//     cout << "\tTree: " << nTree << std::endl;
+//     cout << "\t\t";
+//     cout << rfParms[nTree] << std::endl;
+//   }
+// }
 
 pair<Eigen::VectorXd,Eigen::VectorXd> OnlineRF::getFeatRange() {
   return(pair<Eigen::VectorXd, Eigen::VectorXd> (m_minFeatRange, m_maxFeatRange));
@@ -1428,23 +3214,25 @@ Eigen::MatrixXd OnlineNode::getFeatureImportance() {
     //get the importance from the bestTest
     //    score = m_bestTest->score();
     double score, selfScore;
+
+    //recursively get the score from the child nodes
     double rightChildScore = m_rightChildNode->score();
     double leftChildScore = m_leftChildNode->score();
     double rightChildCount = m_rightChildNode->getCount();
     double leftChildCount = m_leftChildNode->getCount();
     double childrenScore = (rightChildScore * rightChildCount + leftChildScore * leftChildCount) / (rightChildCount + leftChildCount + 1e-16);
-    
+     
+    //score for node is improvement from split - difference in children
+    score = childrenScore;
+
     if(m_hp->causal == true) { //causal models have negative MSE, need to flip to get max variance
-      score = -childrenScore; 
-    } else { //if not a causal tree then get change score from this node to best split
+      score = -score; 
+    } else if(m_hp->type=="regression") { //regression models have negative MSE - need to get max variance
+      score = -score;
+    } else { //if non-causal classification - improvement from this to children
       selfScore = this->score();
       score = selfScore - childrenScore; //positive numbers are better for gini and entropy
     }
-
-//     cout << "nodeNumber: " << m_nodeNumber << "\n";
-//     cout << "selfScore: " << selfScore << "\n";
-//     cout << "childrenScore: " << childrenScore << "\n";
-//     cout << "score: " << score << "\n";
 
     //save into matrix 
     pair<int, double> bt_parms = m_bestTest->getParms();
@@ -1500,20 +3288,24 @@ Eigen::MatrixXd OnlineRF::getFeatureImportance() {
 /// Method for training model with data
 void OnlineRF::train(DataSet& dataset) {
   vector<int> randIndex;
-  int sampRatio = dataset.m_numSamples / 10;
   vector<double> trainError(m_hp->numEpochs, 0.0);
   for (int nEpoch = 0; nEpoch < m_hp->numEpochs; ++nEpoch) {
     //permute the dataset
     randPerm(dataset.m_numSamples, randIndex);
     for (int nSamp = 0; nSamp < dataset.m_numSamples; ++nSamp) {
       if (m_hp->findTrainError == true) {
-	// 	Result result(dataset.m_numClasses);
- 	Result result(dataset.m_numClasses);
- 	this->eval(dataset.m_samples[randIndex[nSamp]], result);
- 	if (result.prediction != dataset.m_samples[randIndex[nSamp]].y) {
- 	  trainError[nEpoch]++;
- 	}
-      }
+	if(m_hp->type=="classification") {
+	  Result result(dataset.m_numClasses);
+	  this->eval(dataset.m_samples[randIndex[nSamp]], result);
+	  if (result.predictionClassification != dataset.m_samples[randIndex[nSamp]].yClass) {
+	    trainError[nEpoch]++;
+	  }
+	} else { //type=="regression"
+	  Result result(m_hp->numTreatments);
+	  this->eval(dataset.m_samples[randIndex[nSamp]], result);
+	  trainError[nEpoch]+=pow(result.predictionRegression - dataset.m_samples[randIndex[nSamp]].yReg, 2);
+	}
+      } //close findTrainError
       //update RF with datapoint
       this->update(dataset.m_samples[randIndex[nSamp]]);
     } //close nSamp loop
@@ -1522,11 +3314,26 @@ void OnlineRF::train(DataSet& dataset) {
 
 //// method for providing predictions from the model
 vector<Result> OnlineRF::test(DataSet& dataset) {
-    vector<Result> results;
-    for (int nSamp = 0; nSamp < dataset.m_numSamples; nSamp++) {
-        Result result(dataset.m_numClasses);
+  vector<Result> results;
+  for (int nSamp = 0; nSamp < dataset.m_numSamples; nSamp++) {
+    int num;      
+    if(m_hp->type=="classification") {
+      num = dataset.m_numClasses;
+      Result result(num);
+      this->eval(dataset.m_samples[nSamp], result);
+      results.push_back(result);
+    } else { //type=="regression"
+      if(m_hp->causal == true) {
+	num = m_hp->numTreatments;
+	Result result(num);
 	this->eval(dataset.m_samples[nSamp], result);
-        results.push_back(result);
+	results.push_back(result);
+      } else { // if regression but not causal
+	Result result;
+	this->eval(dataset.m_samples[nSamp], result);
+	results.push_back(result);
+      }
     }
-    return results;
+  }
+  return results;
 }

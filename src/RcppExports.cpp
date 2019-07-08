@@ -7,8 +7,8 @@
 using namespace Rcpp;
 
 // causal_online_random_forest
-List causal_online_random_forest(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd treat, int numRandomTests, int counterThreshold, int maxDepth, int numTrees, int numEpochs, std::string type, std::string method, bool causal, bool findTrainError, bool verbose, bool trainModel);
-RcppExport SEXP _corf_causal_online_random_forest(SEXP xSEXP, SEXP ySEXP, SEXP treatSEXP, SEXP numRandomTestsSEXP, SEXP counterThresholdSEXP, SEXP maxDepthSEXP, SEXP numTreesSEXP, SEXP numEpochsSEXP, SEXP typeSEXP, SEXP methodSEXP, SEXP causalSEXP, SEXP findTrainErrorSEXP, SEXP verboseSEXP, SEXP trainModelSEXP) {
+List causal_online_random_forest(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd treat, int numRandomTests, int counterThreshold, int maxDepth, int numTrees, int numEpochs, std::string type, std::string method, bool findTrainError, bool verbose, bool trainModel);
+RcppExport SEXP _corf_causal_online_random_forest(SEXP xSEXP, SEXP ySEXP, SEXP treatSEXP, SEXP numRandomTestsSEXP, SEXP counterThresholdSEXP, SEXP maxDepthSEXP, SEXP numTreesSEXP, SEXP numEpochsSEXP, SEXP typeSEXP, SEXP methodSEXP, SEXP findTrainErrorSEXP, SEXP verboseSEXP, SEXP trainModelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,11 +22,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type numEpochs(numEpochsSEXP);
     Rcpp::traits::input_parameter< std::string >::type type(typeSEXP);
     Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< bool >::type causal(causalSEXP);
     Rcpp::traits::input_parameter< bool >::type findTrainError(findTrainErrorSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< bool >::type trainModel(trainModelSEXP);
-    rcpp_result_gen = Rcpp::wrap(causal_online_random_forest(x, y, treat, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type, method, causal, findTrainError, verbose, trainModel));
+    rcpp_result_gen = Rcpp::wrap(causal_online_random_forest(x, y, treat, numRandomTests, counterThreshold, maxDepth, numTrees, numEpochs, type, method, findTrainError, verbose, trainModel));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -82,15 +81,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // predictOrf
-List predictOrf(Eigen::MatrixXd x, List orfModel, bool iteAll);
-RcppExport SEXP _corf_predictOrf(SEXP xSEXP, SEXP orfModelSEXP, SEXP iteAllSEXP) {
+List predictOrf(Eigen::MatrixXd x, List orfModel, bool allTrees);
+RcppExport SEXP _corf_predictOrf(SEXP xSEXP, SEXP orfModelSEXP, SEXP allTreesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type x(xSEXP);
     Rcpp::traits::input_parameter< List >::type orfModel(orfModelSEXP);
-    Rcpp::traits::input_parameter< bool >::type iteAll(iteAllSEXP);
-    rcpp_result_gen = Rcpp::wrap(predictOrf(x, orfModel, iteAll));
+    Rcpp::traits::input_parameter< bool >::type allTrees(allTreesSEXP);
+    rcpp_result_gen = Rcpp::wrap(predictOrf(x, orfModel, allTrees));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -150,7 +149,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_corf_causal_online_random_forest", (DL_FUNC) &_corf_causal_online_random_forest, 14},
+    {"_corf_causal_online_random_forest", (DL_FUNC) &_corf_causal_online_random_forest, 13},
     {"_corf_online_random_forest", (DL_FUNC) &_corf_online_random_forest, 12},
     {"_corf_orf", (DL_FUNC) &_corf_orf, 4},
     {"_corf_corf", (DL_FUNC) &_corf_corf, 5},

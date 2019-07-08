@@ -6,8 +6,8 @@
 \usage{
 causal_online_random_forest(x, y, treat, numRandomTests, counterThreshold,
   maxDepth, numTrees, numEpochs, type = "classification",
-  method = "gini", causal = TRUE, findTrainError = FALSE,
-  verbose = FALSE, trainModel = TRUE)
+  method = "gini", findTrainError = FALSE, verbose = FALSE,
+  trainModel = TRUE)
 }
 \arguments{
 \item{x}{A matrix of features on which to generate predictions.}
@@ -29,8 +29,6 @@ causal_online_random_forest(x, y, treat, numRandomTests, counterThreshold,
 \item{type}{Type of Random Forest.  Only `classification` is implemented at this time.}
 
 \item{method}{Method used for determining if a node should split.  Implemented methods are `gini` for Gini Impurity or `entropy` for entropy.}
-
-\item{causal}{Should the forest be fit in a causal way?  Default=TRUE. Note: not meaningful when set to FALSE.  Included for code compatibility.}
 
 \item{findTrainError}{Should the algorithm find the out of bag error on the training set?  Default=TRUE.}
 
@@ -63,14 +61,6 @@ y <- matrix(0)
 w <- matrix(1)
 
 ## fit the model object
-orfmod <-  causal_online_random_forest(x=x, y=y, treat=w,
-                                       numRandomTests = 2,
-                                       counterThreshold = 10, 
-                                       maxDepth = 5, 
-                                       numTrees = 10,
-                                       numEpochs = 1)
-
-
 }
 \seealso{
 \code{\link{init_orf}} for initializing the orf object, \code{\link{train_orf}} for training the orf object

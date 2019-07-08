@@ -1,8 +1,8 @@
 Package: corf
 Type: Package
 Title: Causal Online Random Forests
-Version: 1.3
-Date: 2019-05-08
+Version: 0.9
+Date: 2019-05-17
 Author: Mike Greene
 Maintainer: Mike Greene <mfgreene79@yahoo.com>
 Description: 

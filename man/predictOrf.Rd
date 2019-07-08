@@ -4,14 +4,16 @@
 \alias{predictOrf}
 \title{Predictions from Online Random Forests}
 \usage{
-predictOrf(x, orfModel, iteAll = FALSE)
+predictOrf(x, orfModel, allTrees = FALSE)
 }
 \arguments{
 \item{x}{A matrix of features on which to generate predictions.}
 
 \item{orfModel}{List representing an orf model.}
 
-\item{iteAll}{If a causal forest, should all ITE estimates be returned? Default=FALSE.}
+\item{allTrees}{Should all prediction estimates be returned? If TRUE, will 
+return a matrix `yHatAllTrees` with one column per tree. If a causal forest, 
+will also return a matrix `tauHatAllTrees`. Default=FALSE.}
 }
 \description{
 Workhorse function used to make predictions from online random forest objects.  Use the function

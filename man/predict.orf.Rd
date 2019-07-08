@@ -4,7 +4,7 @@
 \alias{predict.orf}
 \title{Predict Online Random Forest}
 \usage{
-\method{predict}{orf}(object, x, iteAll = FALSE, ...)
+\method{predict}{orf}(object, x, allTrees = FALSE, ...)
 }
 \arguments{
 \item{object}{An online random forest object}
@@ -12,7 +12,7 @@
 \item{x}{A matrix of features on which to generate predictions.  Must be
 equal to `numFeatures` when forest was initialized.}
 
-\item{iteAll}{If a causal forest, should all ITE estimates be returned?
+\item{allTrees}{If a causal forest, should all TAUHAT estimates be returned?
 Default=FALSE.}
 
 \item{...}{additional arguments affecting the predictions produced.}

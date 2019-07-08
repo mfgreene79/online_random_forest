@@ -40,7 +40,9 @@ class Hyperparameters {
   int counterThreshold;
   int maxDepth;
   int numTrees;
-  
+  int numTreatments; //number of treatment conditions
+
+
   string method; //splitting criteria.  gini, mse etc
   string type; //rf type: classification, regression
 

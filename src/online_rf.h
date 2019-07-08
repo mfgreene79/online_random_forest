@@ -10,7 +10,8 @@
  *                    Institute for Computer Graphics and Vision, 
  *                    Graz University of Technology, Austria
  * Modified 2019 Michael Greene, mfgreene79@yahoo.com
- *  added functionality and enabled ability to connect to R
+ *  added functionality and enabled ability to connect to R, 
+ *  added causal forest functionality, regression forest functionality
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +31,8 @@
 
 class RandomTest {
 public:
+
+  //////Classification Tree Versions
   //Version to initialize with randomization
   RandomTest(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const Eigen::VectorXd &minFeatRange, const Eigen::VectorXd &maxFeatRange,
@@ -48,24 +51,62 @@ public:
 	     Eigen::VectorXd controlTrueStats, Eigen::VectorXd controlFalseStats,
 	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter
 	     );
+
+  //////Regression Tree Versions
+  //Version to initialize with randomization
+  RandomTest(const Hyperparameters& hp, const int& numFeatures, 
+	     const Eigen::VectorXd &minFeatRange, const Eigen::VectorXd &maxFeatRange,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
+
+  //Version to initialize from a known feature/threshold - not causal
+  RandomTest(const Hyperparameters& hp, 
+	     int feature, double threshold,
+	     double trueYMean, double falseYMean,
+	     double trueYVar, double falseYVar,
+	     int trueCount, int falseCount,
+	     double trueErr, double falseErr,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
+
+  //Version to initialize from a known feature/threshold - causal
+  RandomTest(const Hyperparameters& hp, 
+	     int feature, double threshold,
+	     double trueYMean, double falseYMean,
+	     double trueYVar, double falseYVar,
+	     int trueCount, int falseCount,
+	     double trueErr, double falseErr,
+	     Eigen::VectorXd trueWCounts, Eigen::VectorXd falseWCounts,
+	     Eigen::VectorXd trueYStats, Eigen::VectorXd falseYStats,
+	     Eigen::VectorXd trueYVarStats, Eigen::VectorXd falseYVarStats,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
   
   void update(const Sample& sample);
   
   bool eval(const Sample& sample) const;
   
   double score() const;
+  double scoreClassification() const;
+  double scoreRegression() const;
   
+  
+  //// Methods to fetch the statistics from the Random Test
   pair<int,double> getParms();
-  
-  pair<Eigen::VectorXd, Eigen::VectorXd > getStats(std::string type = "all") const;
+  pair<Eigen::VectorXd, Eigen::VectorXd > getStatsClassification(std::string type = "all") const;
+  pair<int, int> getTotCounts();
+  pair<double, double> getYMeans();
+  pair<double, double> getYVars();
+  pair<double, double> getErrs();
+  pair<Eigen::VectorXd, Eigen::VectorXd> getWCounts();
+  pair<Eigen::VectorXd, Eigen::VectorXd> getYStats();
+  pair<Eigen::VectorXd, Eigen::VectorXd> getYVarStats();
 
-  void print();
+//   void print();
 
     
  protected:
   const Hyperparameters* m_hp;
   const int* m_numClasses;
   const Eigen::VectorXd* m_rootLabelStats;
+  const Eigen::VectorXd* m_rootYStats;
   const double* m_rootCounter;
   int m_feature;
   double m_threshold;
@@ -87,16 +128,35 @@ public:
   int m_controlFalseCount;
   Eigen::VectorXd m_controlTrueStats;
   Eigen::VectorXd m_controlFalseStats;
-  
+
+  //Regression Tree versions
+  double m_trueYMean; //mean of y for right side 
+  double m_falseYMean; //mean of y for left side 
+  double m_trueYVar; //mean of y for right side 
+  double m_falseYVar; //mean of y for left side 
+  double m_trueErr; //total error for right side
+  double m_falseErr; //total error for left side
+  Eigen::VectorXd m_trueWCounts; //vector of counts by treatment condition for right side. length numTreatments
+  Eigen::VectorXd m_falseWCounts;//vector of counts by treatment condition for left side. length numTreatments
+  Eigen::VectorXd m_trueYStats; //vector of means of y by treatment condition for right side. length numTreatments
+  Eigen::VectorXd m_falseYStats;//vector of means of y by treatment condition for left side. length numTreatments
+  Eigen::VectorXd m_trueYVarStats; //vector of variance of y by treatment condition for right side. length numTreatments
+  Eigen::VectorXd m_falseYVarStats;//vector of variance of y by treatment condition for left side. length numTreatments
+
+  //Methods for updating the statistics
   void updateStats(const Sample& sample, const bool& decision);
+  void updateStatsClassification(const Sample& sample, const bool& decision);
+  void updateStatsRegression(const Sample& sample, const bool& decision);
 };
 
 class OnlineNode {
 public:
+  //Classification Forest Constructors
   // version to initialize the root node
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
 	     const int& depth, int& numNodes);
+
   //version to initialize versions below the root node - not causal
   OnlineNode(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
@@ -123,33 +183,90 @@ public:
 	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange,
 	     const Eigen::VectorXd &rootLabelStats, const double &rootCounter);
 
+
+  //Regression Forest Constructors
+  // version to initialize the root node
+  OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange, 
+	     const int& depth, int& numNodes);
+
+  //version to initialize versions below the root node - not causal
+  OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+	     const Eigen::VectorXd& minFeatRange, 
+	     const Eigen::VectorXd& maxFeatRange, 
+	     const int& depth,
+	     const double parentCounter,
+	     const double parentYMean,
+	     const double parentYVar,
+	     const double parentErr,
+	     int nodeNumber, int parentNodeNumber, int& numNodes,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
+  
+  //version to initialize below the root - causal
+  OnlineNode(const Hyperparameters& hp, const int& numFeatures, 
+	     const Eigen::VectorXd& minFeatRange, 
+	     const Eigen::VectorXd& maxFeatRange, 
+	     const int& depth,
+	     const double parentCounter,
+	     const double parentYMean,
+	     const double parentYVar,
+	     const double parentErr,
+	     const Eigen::VectorXd& parentWCounts,
+	     const Eigen::VectorXd& parentYStats,
+	     const Eigen::VectorXd& parentYVarStats,
+	     int nodeNumber, int parentNodeNumber, int& numNodes,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
+
+  //Version to initialize from a vector of information about the node - root version
+  OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
+	     int& numNodes, const Eigen::VectorXd& minFeatRange, 
+	     const Eigen::VectorXd& maxFeatRange);
+
+  //Version to initialize from a vector of information about the node - below root version
+  OnlineNode(const Eigen::VectorXd& nodeParms, const Hyperparameters& hp,
+	     int& numNodes, const Eigen::VectorXd& minFeatRange, 
+	     const Eigen::VectorXd& maxFeatRange,
+	     const Eigen::VectorXd &rootYStats, const double &rootCounter);
+
   ~OnlineNode();
     
   //update with data
   //  void update(const Sample& sample);
+  void updateClassification(const Sample& sample);
+  void updateRegression(const Sample& sample);
   void update(const Sample& sample);
   //evaluate based on a new data point
   void eval(const Sample& sample, Result& result);
+  void evalRegression(const Sample& sample, Result& result);
+  void evalClassification(const Sample& sample, Result& result);
 
   //version to grow the node recursively from a matrix of information
 
   void update(const Eigen::MatrixXd& treeParms);
+  void updateClassification(const Eigen::MatrixXd& treeParms);
+  void updateRegression(const Eigen::MatrixXd& treeParms);
 
   //set child node numbers if the split occurs
   void setChildNodeNumbers(int rightChildNodeNumber, int leftChildNodeNumber);
 
   //method to add nodeParms to the matrix of parms for the tree
   Eigen::VectorXd exportParms(); //export parms out to a vector
+  Eigen::VectorXd exportParmsClassification(); //export parms out to a vector
+  Eigen::VectorXd exportParmsClassificationCausal(); //export parms out to a vector
+  Eigen::VectorXd exportParmsRegression(); //export parms out to a vector
+  Eigen::VectorXd exportParmsRegressionCausal(); //export parms out to a vector
   
   //recursive function to add elements to the vector for each child node
   void exportChildParms(vector<Eigen::VectorXd> &treeParmsVector);
 
   //function to score node with labelstats
+  double scoreClassification();
+  double scoreRegression();
   double score();
   double getCount(); 
 
-  void printInfo();
-  void print();
+//   void printInfo();
+//   void print();
 
 
   //recursive function to get feature importances
@@ -166,7 +283,6 @@ public:
   bool m_isLeaf;
   const Hyperparameters* m_hp;
   int m_label;
-  Eigen::VectorXd m_ite; //individual treatment effect - populated if causal tree, otherwise 0s
   double m_counter;
   double m_treatCounter;
   double m_controlCounter;
@@ -185,15 +301,31 @@ public:
 
   int* m_numNodes; //pointer to tree for number of nodes
   const Eigen::VectorXd* m_rootLabelStats;
+  const Eigen::VectorXd* m_rootYStats;
   const double* m_rootCounter;
-    
+
+  //regression tree info
+  //alternate specification - vectors of treatment conditions.  place 0 specifies control.
+  Eigen::VectorXd m_wCounts; //counts of obs by treatment condition w.  vector of length numTreatments
+  Eigen::VectorXd m_yStats; //means of outcome by treatment vector of length numTreatments
+  Eigen::VectorXd m_yVarStats; //variance of outcome by treatment vector of length numTreatments
+  
+  double m_yMean; //mean of outcome for the node
+  double m_yVar; //variance in y for the node
+  double m_err; //total error for the node
+  Eigen::VectorXd m_tauHat; //treatment effects for the node if causal.  length numTreatments
+  Eigen::VectorXd m_tauVarHat; //treatment effect variance estimate if causal. length numTreatments
+
   bool shouldISplit() const;
+  bool shouldISplitRegression() const;
+  bool shouldISplitClassification() const;
 
 };
 
 
 class OnlineTree {
 public:
+  //Classification Tree Constructors
   //version to create with randomization
   OnlineTree(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
@@ -203,10 +335,22 @@ public:
 	     const int& numClasses, double oobe, double counter,
 	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
 
+  //Regression Tree Constructors
+  //version to create with randomization
+  OnlineTree(const Hyperparameters& hp, const int& numFeatures, 
+	       const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
+
+  //version to create from a matrix of parameters
+  OnlineTree(const Eigen::MatrixXd& treeParms, const Hyperparameters& hp,
+	     double oobe, double counter,
+	     const Eigen::VectorXd& minFeatRange, const Eigen::VectorXd& maxFeatRange);
+
   ~OnlineTree();
 
   //update the tree with a new data point
   void update(Sample& sample);
+  void updateClassification(Sample& sample);
+  void updateRegression(Sample& sample);
 
   //evaluate a new data point
   void eval(Sample& sample, Result& result);
@@ -218,9 +362,9 @@ public:
   double getOOBE();
   double getCounter();
 
-  //print information about and of the tree
-  void printInfo();
-  void print();
+//   //print information about and of the tree
+//   void printInfo();
+//   void print();
 
   pair<Eigen::VectorXd,Eigen::VectorXd> getFeatRange();
   void updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
@@ -251,6 +395,7 @@ private:
 
 class OnlineRF {
 public:
+  // Classification Forest Creation
   //version to construct using randomization
   OnlineRF(const Hyperparameters& hp, const int& numClasses, const int& numFeatures, 
 	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
@@ -260,13 +405,29 @@ public:
 	   const int& numClasses, double oobe, double counter,
 	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
 
+  //Regression Forest Constructors
+  //version to construct using randomization
+  OnlineRF(const Hyperparameters& hp, const int& numFeatures, 
+	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
+
+  //version to construct from a set of parameters
+  OnlineRF(const vector<Eigen::MatrixXd> orfParms, const Hyperparameters& hp,
+	   double oobe, double counter,
+	   Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);
+
+
+
   ~OnlineRF();
   
-  //udpate with a new data point
+  //update with a new data point
   void update(Sample& sample);
+  void updateClassification(Sample& sample);
+  void updateRegression(Sample& sample);
   
   //evaluate a new data point
   void eval(Sample& sample, Result& result);
+  void evalClassification(Sample& sample, Result& result);
+  void evalRegression(Sample& sample, Result& result);
  
   //export forest parameters
   vector<Eigen::MatrixXd> exportParms(); 
@@ -275,9 +436,9 @@ public:
   double getOOBE();
   double getCounter();
 
-  //print information about and of the RF
-  void printInfo();
-  void print();
+//   //print information about and of the RF
+//   void printInfo();
+//   void print();
 
   pair<Eigen::VectorXd,Eigen::VectorXd> getFeatRange();
   void updateFeatRange(Eigen::VectorXd minFeatRange, Eigen::VectorXd maxFeatRange);

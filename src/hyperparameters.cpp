@@ -40,6 +40,6 @@ Rcpp::List Hyperparameters::hpToList() {
   ret["method"] = method;
   ret["type"] = type;
   ret["causal"] = causal;
-  
+  ret["numTreatments"] = numTreatments;
   return(ret);
 }

@@ -43,10 +43,11 @@ using namespace std;
 class Sample {
 public:
   Eigen::VectorXd x; //features
-  int y; //target
+  int yClass; //class target
   double w; //weight
   int id; //id
   int W; //treatment identifier
+  double yReg; //regression target
 };
 
 class DataSet {
@@ -54,17 +55,24 @@ class DataSet {
 
   //constructor for data without treatment assignments
   DataSet();
-  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y);
+  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, 
+	  std::string type);
   //constructor for data with treatment assignments
-  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd W);
-  //constructor for data without treatment assignments or outcome (for testing)
+  DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, 
+	  Eigen::VectorXd W, 
+	  std::string type);
+  //constructor for data without treatment assignments or 
+  //  outcome (for testing) - classification
   DataSet(Eigen::MatrixXd x, int numClasses);
+  //  regression
+  DataSet(Eigen::MatrixXd x);
   void findFeatRange();
 
   vector<Sample> m_samples;
   int m_numSamples;
   int m_numFeatures;
   int m_numClasses;
+  int m_numTreatments;
 
   Eigen::VectorXd m_minFeatRange;
   Eigen::VectorXd m_maxFeatRange;
@@ -73,13 +81,18 @@ class DataSet {
 class Result {
 public:
   Result();
-  Result(const int& numClasses);
+  Result(const int& num);
 
-  Eigen::VectorXd confidence;
-  int prediction;
-  Eigen::VectorXd ite; //individual treatment effect - difference over control - one value per class
+  Eigen::VectorXd confidence; //probability of prediction classes
+  int predictionClassification; //class prediction for classification
+  double predictionRegression; //outcome prediction for regression
+  double predictionVarianceRegression; //outcome prediction variance for regression
+  int weight; //weighting for regression averaging
+  Eigen::VectorXd tauHat; //individual treatment effect - difference over control - one value per class or treatment
+  Eigen::VectorXd tauVarHat; //variance estimate in the individual treatment effect - one value per treatment
   
-  Eigen::MatrixXd iteAllTrees; //capture values for all trees - one col per class one row per tree
+  Eigen::MatrixXd tauHatAllTrees; //capture values for all trees - one col per class one row per tree
+  Eigen::VectorXd yHatAllTrees; //capture values for all trees - one entry per tree
 };
 
 #endif /* DATA_H_ */

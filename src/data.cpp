@@ -48,12 +48,23 @@ void DataSet::findFeatRange() {
   }
 }
 
-Result::Result() {
+Result::Result() :
+  predictionClassification(0.0),
+  predictionRegression(0.0),
+  predictionVarianceRegression(0.0),
+  weight(0)
+{
 }
 
-Result::Result(const int& numClasses) : confidence(Eigen::VectorXd::Zero(numClasses)),
-					ite(Eigen::VectorXd::Zero(numClasses))
- {
+Result::Result(const int& num) : confidence(Eigen::VectorXd::Zero(num)),
+				 predictionClassification(0.0),
+				 predictionRegression(0.0),
+				 predictionVarianceRegression(0.0),
+				 weight(0),
+				 tauHat(Eigen::VectorXd::Zero(num)),
+				 tauVarHat(Eigen::VectorXd::Zero(num))
+
+{
 }
 
 DataSet::DataSet() {
@@ -62,60 +73,89 @@ DataSet::DataSet() {
 
 /////version to apply when using a non-causal random forest
 /////create a DataSet item from input matrix and y
-DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y) {
+DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, std::string type="classification") {
   //creates a DataSet class from matrices x and y
-  //  DataSet ds;
   m_numFeatures = x.cols();
   m_numSamples = x.rows();
 
-  set<int> labels;
-  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
-    Sample sample;
-    sample.x = Eigen::VectorXd(m_numFeatures);
-    sample.id = nSamp;
-    sample.w = 1.0;
-    sample.y = y(nSamp);
-    labels.insert(sample.y);
-    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
-      sample.x(nFeat) = x(nSamp, nFeat);
-    } //loop nFeat
-    m_samples.push_back(sample); // push sample into dataset
-  } //loop nSamp
-  m_numClasses = labels.size();
-
+  if(type == "classification") {
+    set<int> labels;
+    for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+      Sample sample;
+      sample.x = Eigen::VectorXd(m_numFeatures);
+      sample.id = nSamp;
+      sample.w = 1.0;
+      sample.yClass = y(nSamp);
+      labels.insert(sample.yClass);
+      for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+	sample.x(nFeat) = x(nSamp, nFeat);
+      } //loop nFeat
+      m_samples.push_back(sample); // push sample into dataset
+    } //loop nSamp
+    m_numClasses = labels.size();
+  } else { //begin type=="regression"
+    for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+      Sample sample;
+      sample.x = Eigen::VectorXd(m_numFeatures);
+      sample.id = nSamp;
+      sample.w = 1.0;
+      sample.yReg = y(nSamp);
+      for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+	sample.x(nFeat) = x(nSamp, nFeat);
+      } //loop nFeat
+      m_samples.push_back(sample); // push sample into dataset
+    } //loop nSamp
+  }
   this->findFeatRange();
-}
+ }
 
 /////version to apply when using a causal random forest - includes treatment indicators
-DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, Eigen::VectorXd W) {
+DataSet::DataSet(Eigen::MatrixXd x, Eigen::VectorXd y, 
+		 Eigen::VectorXd W, std::string type="classification") {
   //creates a DataSet class from matrices x and y
-//   DataSet ds;
-//   ds.m_numFeatures = x.cols();
-//   ds.m_numSamples = x.rows();
-
   m_numFeatures = x.cols();
   m_numSamples = x.rows();
 
-  set<int> labels;
-  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
-    Sample sample;  
-    sample.x = Eigen::VectorXd(m_numFeatures);
-    sample.id = nSamp;
-    sample.w = 1.0;
-    sample.y = y(nSamp);
-    sample.W = W(nSamp);
-    labels.insert(sample.y);
-    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
-      sample.x(nFeat) = x(nSamp, nFeat);
-    } //loop nFeat
-    m_samples.push_back(sample); // push sample into dataset
-  } //loop nSamp
-  m_numClasses = labels.size();
-  
+  if(type == "classification") {
+    set<int> labels;
+    set<int> treatmentLabels;
+    for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+      Sample sample;  
+      sample.x = Eigen::VectorXd(m_numFeatures);
+      sample.id = nSamp;
+      sample.w = 1.0;
+      sample.yClass = y(nSamp);
+      sample.W = W(nSamp);
+      labels.insert(sample.yClass);
+      treatmentLabels.insert(sample.W);
+      for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+	sample.x(nFeat) = x(nSamp, nFeat);
+      } //loop nFeat
+      m_samples.push_back(sample); // push sample into dataset
+    } //loop nSamp
+    m_numClasses = labels.size();
+    m_numTreatments = treatmentLabels.size();
+  } else { //begin type=="regression"
+    set<int> treatmentLabels;
+    for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+      Sample sample;  
+      sample.x = Eigen::VectorXd(m_numFeatures);
+      sample.id = nSamp;
+      sample.w = 1.0;
+      sample.yReg = y(nSamp);
+      sample.W = W(nSamp);
+      treatmentLabels.insert(sample.W);
+      for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+	sample.x(nFeat) = x(nSamp, nFeat);
+      } //loop nFeat
+      m_samples.push_back(sample); // push sample into dataset
+    } //loop nSamp
+    m_numTreatments = treatmentLabels.size();
+  }
   this->findFeatRange();
 }
 
-//create dataset for testing purposes
+//create dataset for testing purposes - classification
 DataSet::DataSet(Eigen::MatrixXd x, int numClasses) {
   //creates a DataSet class from matrix x
   //  DataSet ds;
@@ -134,5 +174,23 @@ DataSet::DataSet(Eigen::MatrixXd x, int numClasses) {
     m_samples.push_back(sample); // push sample into dataset
   } //loop nSamp
   m_numClasses = numClasses;
+}
+
+//DataSet for test purposes for regression
+DataSet::DataSet(Eigen::MatrixXd x) {
+  //creates a DataSet class from matrix x
+  m_numFeatures = x.cols();
+  m_numSamples = x.rows();
+  
+  for (int nSamp = 0; nSamp < x.rows(); ++nSamp) {
+    Sample sample;
+    sample.x = Eigen::VectorXd(m_numFeatures);
+    sample.id = nSamp;
+    sample.w = 1.0;
+    for (int nFeat = 0; nFeat < m_numFeatures; ++nFeat) {
+      sample.x(nFeat) = x(nSamp, nFeat);
+    } //loop nFeat
+    m_samples.push_back(sample); // push sample into dataset
+  } //loop nSamp
 }
 

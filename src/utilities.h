@@ -35,6 +35,7 @@
 #include <vector>
 #include <cmath>
 #include <unistd.h>
+//#include <Rcpp.h>
 
 using namespace std;
 
@@ -87,13 +88,18 @@ inline int poisson(double A) {
     return k;
 }
 
+// int rpoisSclr(double lambda) {
+//   Rcpp::NumericVector out = R::rpois(lambda);
+//   return(out[0]);
+// }
+
 inline void randPerm(const int& inNum, vector<int>& outVect) {
     outVect.resize(inNum);
     int randIndex, tempIndex;
     for (int nFeat = 0; nFeat < inNum; nFeat++) {
         outVect[nFeat] = nFeat;
     }
-    for (register int nFeat = 0; nFeat < inNum; nFeat++) {
+    for (int nFeat = 0; nFeat < inNum; nFeat++) {
         randIndex = (int) floor(((double) inNum - nFeat) * randDouble()) + nFeat;
         if (randIndex == inNum) {
             randIndex--;
@@ -110,7 +116,7 @@ inline void randPerm(const int& inNum, const int& inPart, vector<int>& outVect) 
     for (int nFeat = 0; nFeat < inNum; nFeat++) {
         outVect[nFeat] = nFeat;
     }
-    for (register int nFeat = 0; nFeat < inPart; nFeat++) {
+    for (int nFeat = 0; nFeat < inPart; nFeat++) {
         randIndex = (int) floor(((double) inNum - nFeat) * randDouble()) + nFeat;
         if (randIndex == inNum) {
             randIndex--;

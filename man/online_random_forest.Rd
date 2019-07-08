@@ -26,8 +26,7 @@ will occur.}
 
 \item{numEpochs}{Number of epochs for processing during each training step.}
 
-\item{type}{Type of Random Forest.  Only `classification` is implemented
-at this time.}
+\item{type}{Type of Random Forest.  Either `classification` or `regression`}
 
 \item{method}{Method used for determining if a node should split. See details for more information.}
 
